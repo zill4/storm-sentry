@@ -6,14 +6,21 @@ export const dynamic = "force-dynamic"
 export default function StormMapPage() {
   const storms = listActiveStorms()
   return (
-    <main className="min-h-screen bg-[#f7f8f6] text-zinc-950">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-1 border-b border-zinc-200 pb-4">
-          <h1 className="text-2xl font-semibold tracking-tight">Storm Map</h1>
-          <p className="max-w-3xl text-sm leading-6 text-zinc-600">
-            Live US severe-weather feed pulled from the National Weather Service
-            every 60 seconds. The map shows alerts with polygon geometry; the
-            table below lists every active alert sorted by severity.
+    <main className="dark relative min-h-screen overflow-hidden bg-[#070b16] text-zinc-100">
+      {/* Ambient glow behind the dashboard. */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(70%_55%_at_50%_-10%,rgba(56,189,248,0.16),transparent_60%)]" />
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+        <header className="flex flex-col gap-2">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-300">
+            Storm Sentry
+          </span>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            Live Storm Intelligence
+          </h1>
+          <p className="max-w-2xl text-sm leading-6 text-zinc-400">
+            Real-time US severe-weather alerts from the National Weather Service,
+            with a live precipitation-radar layer. The map glows where storms are
+            active; the list tracks every alert by severity.
           </p>
         </header>
 
