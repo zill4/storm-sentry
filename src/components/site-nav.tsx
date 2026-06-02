@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Activity, Bell, Code2, Map, Zap } from "lucide-react"
+import { Activity, Bell, Code2, FileText, Map, Zap } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 
 const links = [
   { href: "/", label: "Storm Map", icon: Map },
+  { href: "/reports", label: "ZIP Reports", icon: FileText },
   { href: "/contacts", label: "Contacts", icon: Bell },
   { href: "/developer", label: "Developer", icon: Code2 },
 ]
