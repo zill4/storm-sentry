@@ -56,6 +56,18 @@ ENABLE_NWS_POLLER=true
 
 To refresh the bundled ZIP dataset: `node scripts/build-zcta.mjs`.
 
+## Deploy (Railway)
+
+Deploys from GitHub `main` via Nixpacks; runtime config is in [`railway.json`](railway.json) — the start command binds Railway's `$PORT`, health check is `/api/health`, and it runs a **single replica**.
+
+Required service **Variables** (the local `.env.local` is *not* deployed):
+
+- `NWS_USER_AGENT` — required, or every poll fails.
+- `TOMORROW_IO_API_KEY` — required for Tomorrow.io enrichment (omit to run NWS-only).
+- Optional: the `TOMORROW_*` tuning vars above.
+
+> ⚠️ State is in-memory and **resets on every redeploy**. Keep **1 replica** until the Postgres datastore lands — otherwise the poller and the Tomorrow.io budget counter run per-replica and multiply API usage past the free-tier limit.
+
 ## API
 
 | Method | Path | Purpose |
