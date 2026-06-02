@@ -18,9 +18,10 @@ export default function StormMapPage() {
             Live Storm Intelligence
           </h1>
           <p className="max-w-2xl text-sm leading-6 text-zinc-400">
-            Real-time US severe-weather alerts from the National Weather Service,
-            with a live precipitation-radar layer. The map glows where storms are
-            active; the list tracks every alert by severity.
+            Real-time US severe-weather alerts from the National Weather Service
+            over a live precipitation-radar layer, resolved down to the ZIP
+            code. Each threatened ZIP is enriched with a Tomorrow.io nowcast and
+            queued as an exportable event.
           </p>
         </header>
 

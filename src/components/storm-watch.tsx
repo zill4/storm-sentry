@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StormMap } from "@/components/storm-map"
 import { useLiveEvents } from "@/lib/use-live-events"
 import { severityHex } from "@/lib/storms/severity"
 import { severityRank, type StormEvent } from "@/lib/storms/types"
+import type { ZipInsightEvent } from "@/lib/zip-insights/types"
 
 type Props = {
   initialStorms: StormEvent[]
@@ -21,6 +23,7 @@ const GLASS = "border-0 bg-white/[0.03] ring-1 ring-white/10 backdrop-blur"
 
 export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) {
   const [storms, setStorms] = useState<StormEvent[]>(initialStorms)
+  const [zipInsights, setZipInsights] = useState<ZipInsightEvent[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
@@ -31,10 +34,18 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
   async function refresh() {
     setRefreshing(true)
     try {
-      const res = await fetch("/api/storms", { cache: "no-store" })
-      if (!res.ok) return
-      const data = (await res.json()) as { storms: StormEvent[] }
-      setStorms(data.storms)
+      const [stormsRes, zipsRes] = await Promise.all([
+        fetch("/api/storms", { cache: "no-store" }),
+        fetch("/api/zip-insights?limit=1500", { cache: "no-store" }),
+      ])
+      if (stormsRes.ok) {
+        const data = (await stormsRes.json()) as { storms: StormEvent[] }
+        setStorms(data.storms)
+      }
+      if (zipsRes.ok) {
+        const data = (await zipsRes.json()) as { events: ZipInsightEvent[] }
+        setZipInsights(data.events)
+      }
       setLastRefresh(new Date())
     } finally {
       setRefreshing(false)
@@ -56,29 +67,36 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
     debouncedRefresh()
   })
 
-  // Set the first timestamp only after mount — `new Date()` during SSR would
-  // not match the client and cause a hydration mismatch.
+  // Pull storms + the ZIP-insight queue on mount, then on an interval.
+  // refresh() sets lastRefresh on completion; starting at null is hydration-safe.
   useEffect(() => {
-    setLastRefresh(new Date())
-  }, [])
-
-  useEffect(() => {
-    const id = setInterval(refresh, refreshIntervalMs)
-    return () => clearInterval(id)
+    const initial = setTimeout(() => void refresh(), 0)
+    const id = setInterval(() => void refresh(), refreshIntervalMs)
+    return () => {
+      clearTimeout(initial)
+      clearInterval(id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshIntervalMs])
 
   const stats = useMemo(() => {
-    const mapped = storms.filter((s) => s.geometry).length
     const severe = storms.filter((s) => severityRank(s.severity) >= 3).length
-    return { total: storms.length, mapped, severe }
-  }, [storms])
+    const distinctZips = new Set(zipInsights.map((z) => z.zip)).size
+    const enriched = zipInsights.filter((z) => z.nowcast != null).length
+    return { total: storms.length, severe, distinctZips, enriched }
+  }, [storms, zipInsights])
 
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Active Alerts" value={stats.total} />
         <StatCard label="Severe & Above" value={stats.severe} accent="#f97316" />
-        <StatCard label="Mapped" value={stats.mapped} accent="#38bdf8" />
+        <StatCard
+          label="Threatened ZIPs"
+          value={stats.distinctZips}
+          accent="#38bdf8"
+          sub={stats.enriched > 0 ? `${stats.enriched} nowcast-enriched` : undefined}
+        />
         <Card className={`${GLASS} justify-between gap-2 py-4`}>
           <div className="px-4 text-xs font-medium uppercase tracking-wide text-zinc-400">
             Feed
@@ -133,6 +151,7 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
           <div className="h-[480px] lg:h-[560px]">
             <StormMap
               storms={storms}
+              zipInsights={zipInsights}
               selectedId={selectedId}
               onSelect={setSelectedId}
               showRadar={showRadar}
@@ -141,14 +160,28 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
         </Card>
 
         <Card className={`${GLASS} flex h-[560px] flex-col gap-0 p-0`}>
-          <div className="border-b border-white/10 px-4 py-3 text-sm font-semibold">
-            Active Storms
-          </div>
-          <ActiveStormsList
-            storms={storms}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-          />
+          <Tabs defaultValue="storms" className="flex min-h-0 flex-1 flex-col gap-0">
+            <div className="border-b border-white/10 px-3 py-2.5">
+              <TabsList variant="line" className="h-8">
+                <TabsTrigger value="storms">Storms ({storms.length})</TabsTrigger>
+                <TabsTrigger value="zips">ZIPs ({stats.distinctZips})</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="storms" className="min-h-0 flex-1 overflow-hidden">
+              <div className="flex h-full flex-col">
+                <ActiveStormsList
+                  storms={storms}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
+              </div>
+            </TabsContent>
+            <TabsContent value="zips" className="min-h-0 flex-1 overflow-hidden">
+              <div className="flex h-full flex-col">
+                <ZipInsightsList insights={zipInsights} />
+              </div>
+            </TabsContent>
+          </Tabs>
         </Card>
       </div>
     </div>
@@ -159,10 +192,12 @@ function StatCard({
   label,
   value,
   accent,
+  sub,
 }: {
   label: string
   value: number
   accent?: string
+  sub?: string
 }) {
   return (
     <Card className={`${GLASS} gap-2 py-4`}>
@@ -178,6 +213,7 @@ function StatCard({
           />
         )}
       </div>
+      {sub && <div className="px-4 text-[11px] text-zinc-500">{sub}</div>}
     </Card>
   )
 }
@@ -258,6 +294,75 @@ function ActiveStormsList({
               {s.expiresAt ? ` → ${formatTime(s.expiresAt)}` : ""}
             </div>
           </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ZipInsightsList({ insights }: { insights: ZipInsightEvent[] }) {
+  const sorted = useMemo(() => {
+    return [...insights]
+      .sort((a, b) => {
+        const sev = severityRank(b.severity) - severityRank(a.severity)
+        if (sev !== 0) return sev
+        return a.distanceMeters - b.distanceMeters
+      })
+      .slice(0, 250)
+  }, [insights])
+
+  if (sorted.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-zinc-500">
+        No ZIP codes under active storms. Threatened ZIPs appear here as storms
+        move in.
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex-1 space-y-2 overflow-y-auto p-3">
+      {sorted.map((z) => {
+        const color = severityHex(z.severity)
+        const miles = (z.distanceMeters / 1609.344).toFixed(1)
+        const n = z.nowcast
+        return (
+          <div
+            key={z.id}
+            className="rounded-lg border border-white/10 bg-white/[0.02] p-3"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-sm font-semibold text-zinc-100">
+                {z.zip}
+              </span>
+              <Badge
+                variant="outline"
+                className="shrink-0 border-transparent text-[10px] font-semibold uppercase tracking-wide"
+                style={{ color, backgroundColor: `${color}22` }}
+              >
+                {z.severity}
+              </Badge>
+            </div>
+            <div className="mt-1 truncate text-xs text-zinc-400">
+              {z.eventType}
+              <span className="text-zinc-600"> · {miles} mi from center</span>
+            </div>
+            {n ? (
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums text-sky-300/90">
+                {n.windGust != null && <span>{Math.round(n.windGust)} mph gust</span>}
+                {n.precipIntensity != null && (
+                  <span>{n.precipIntensity.toFixed(2)} in/hr</span>
+                )}
+                {n.weatherLabel && (
+                  <span className="text-zinc-400">{n.weatherLabel}</span>
+                )}
+              </div>
+            ) : (
+              <div className="mt-1.5 text-[11px] text-zinc-600">
+                Queued · nowcast pending
+              </div>
+            )}
+          </div>
         )
       })}
     </div>

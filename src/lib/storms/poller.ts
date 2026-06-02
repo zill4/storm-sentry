@@ -21,6 +21,12 @@ export async function runOnePoll(): Promise<{
   skippedNoGeometry: number
   expiredRemoved: number
   matcher?: ReturnType<typeof import("@/lib/businesses/matcher").runMatcher> | null
+  tomorrowEvents?: Awaited<
+    ReturnType<typeof import("@/lib/tomorrow/events").pollTomorrowEvents>
+  > | null
+  zipInsights?: Awaited<
+    ReturnType<typeof import("@/lib/zip-insights/pipeline").runZipInsights>
+  > | null
   error?: string
 }> {
   const startedAt = new Date().toISOString()
@@ -40,6 +46,19 @@ export async function runOnePoll(): Promise<{
       accepted++
       upsertStorm(storm)
     }
+
+    // Optional 2nd source: Tomorrow.io severe-weather events (slow cadence,
+    // budget-gated, deduped against NWS). Best-effort — never fails the poll.
+    let tomorrowEvents: Awaited<
+      ReturnType<typeof import("@/lib/tomorrow/events").pollTomorrowEvents>
+    > | null = null
+    try {
+      const { pollTomorrowEvents } = await import("@/lib/tomorrow/events")
+      tomorrowEvents = await pollTomorrowEvents()
+    } catch (tErr) {
+      console.error("[storm-poller] tomorrow events failed", tErr)
+    }
+
     const expiredRemoved = removeExpiredStorms()
     let matcherResult: ReturnType<typeof import("@/lib/businesses/matcher").runMatcher> | null = null
     try {
@@ -47,6 +66,18 @@ export async function runOnePoll(): Promise<{
       matcherResult = runMatcher()
     } catch (matchErr) {
       console.error("[storm-poller] matcher failed", matchErr)
+    }
+
+    // ZIP-level intersection + nowcast enrichment. Runs off NWS storms even when
+    // Tomorrow.io is disabled (enrichment simply no-ops without budget).
+    let zipInsights: Awaited<
+      ReturnType<typeof import("@/lib/zip-insights/pipeline").runZipInsights>
+    > | null = null
+    try {
+      const { runZipInsights } = await import("@/lib/zip-insights/pipeline")
+      zipInsights = await runZipInsights()
+    } catch (zErr) {
+      console.error("[storm-poller] zip insights failed", zErr)
     }
     const status = getPollerStatus()
     updatePollerStatus({
@@ -67,6 +98,9 @@ export async function runOnePoll(): Promise<{
         skippedNoGeometry,
         expiredRemoved,
         matchesCreated: matcherResult?.matchesCreated ?? 0,
+        zipInsightsCreated: zipInsights?.created ?? 0,
+        threatenedZips: zipInsights?.threatenedZips ?? 0,
+        tomorrowEventsIngested: tomorrowEvents?.ingested ?? 0,
       },
     })
     return {
@@ -76,6 +110,8 @@ export async function runOnePoll(): Promise<{
       skippedNoGeometry,
       expiredRemoved,
       matcher: matcherResult,
+      tomorrowEvents,
+      zipInsights,
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

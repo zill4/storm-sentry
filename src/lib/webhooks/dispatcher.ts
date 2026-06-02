@@ -45,6 +45,35 @@ function buildPayload(event: Extract<BusEvent, { type: "match_created" }>) {
   }
 }
 
+function buildZipInsightPayload(
+  event: Extract<BusEvent, { type: "zip_insight_added" }>,
+) {
+  const i = event.insight
+  const distanceMiles = i.distanceMeters / 1609.344
+  return {
+    event_type: "storm_sentry.zip_insight.v1",
+    fired_at: event.at,
+    idempotency_key: i.id,
+    zip: { code: i.zip, lat: i.lat, lng: i.lng },
+    storm: {
+      id: i.stormId,
+      source: i.source,
+      event_type: i.eventType,
+      severity: i.severity,
+      headline: i.headline,
+      area_desc: i.areaDesc,
+      expires_at: i.expiresAt,
+      distance_meters: i.distanceMeters,
+      distance_miles: Number(distanceMiles.toFixed(2)),
+    },
+    // null at fire time; enriched values land shortly after and are available
+    // from GET /api/zip-insights.
+    nowcast: i.nowcast,
+    status: i.status,
+    created_at: i.createdAt,
+  }
+}
+
 async function dispatchOne(
   sub: WebhookSubscription,
   eventType: string,
@@ -94,15 +123,20 @@ export function startWebhookDispatcher(): { started: boolean; reason?: string } 
   if (globalThis.__stormSentryWebhookDispatcher) {
     return { started: false, reason: "already running" }
   }
-  const unsubscribe = subscribe((event) => {
-    if (event.type !== "match_created") return
-    const payload = buildPayload(event)
+  const fanOut = (eventType: string, payload: object) => {
     const subs = listWebhooks().filter(
-      (s) => s.events.includes("match_created") || s.events.includes("*"),
+      (s) => s.events.includes(eventType) || s.events.includes("*"),
     )
     for (const sub of subs) {
       // Fire and forget; deliveries are recorded inside dispatchOne.
-      void dispatchOne(sub, event.type, payload)
+      void dispatchOne(sub, eventType, payload)
+    }
+  }
+  const unsubscribe = subscribe((event) => {
+    if (event.type === "match_created") {
+      fanOut(event.type, buildPayload(event))
+    } else if (event.type === "zip_insight_added") {
+      fanOut(event.type, buildZipInsightPayload(event))
     }
   })
   globalThis.__stormSentryWebhookDispatcher = { unsubscribe }

@@ -75,7 +75,7 @@ export type StormGeometry =
 
 export type StormEvent = {
   id: string
-  source: "nws" | "fixture"
+  source: "nws" | "fixture" | "tomorrow"
   sourceEventId: string
   eventType: string
   severity: string

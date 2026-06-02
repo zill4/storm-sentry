@@ -19,10 +19,12 @@ const ENDPOINTS: Array<{
   description: string
 }> = [
   { method: "GET", path: "/api/health", description: "Service status + poller stats." },
-  { method: "GET", path: "/api/storms", description: "All currently active alerts (NWS + fixtures), sorted by severity then recency." },
+  { method: "GET", path: "/api/storms", description: "All currently active alerts (NWS + Tomorrow.io + fixtures), sorted by severity then recency." },
+  { method: "GET", path: "/api/zip-insights", description: "ZIP-level storm insight queue (storm×ZIP intersection + Tomorrow.io nowcast). Filters: ?status= ?minSeverity= ?source= ?enriched=true ?limit= ?format=ndjson." },
+  { method: "POST", path: "/api/zip-insights", description: "Mark insights exported (dequeue). Body: { ids?: string[], all?: boolean }." },
   { method: "GET", path: "/api/businesses", description: "Every contact with notification status, nearest active storm, and distance." },
-  { method: "GET", path: "/api/events", description: "Server-sent event stream. Frames: hello, storm_added, storm_updated, storm_removed, match_created, matches_pruned, fixtures_cleared, poll_completed." },
-  { method: "POST", path: "/api/webhooks", description: "Subscribe a URL. Body: { url, secret?, events? }. Posts storm_sentry.match.v1 payloads." },
+  { method: "GET", path: "/api/events", description: "Server-sent event stream. Frames: hello, storm_added, storm_updated, storm_removed, zip_insight_added, zip_insight_updated, match_created, matches_pruned, fixtures_cleared, poll_completed." },
+  { method: "POST", path: "/api/webhooks", description: "Subscribe a URL. Body: { url, secret?, events? }. events ∈ match_created | zip_insight_added | *. Posts storm_sentry.match.v1 and storm_sentry.zip_insight.v1 payloads." },
   { method: "GET", path: "/api/webhooks", description: "List subscriptions + last 20 deliveries." },
   { method: "DELETE", path: "/api/webhooks/{id}", description: "Unsubscribe." },
   { method: "POST", path: "/api/replay/inject", description: "Inject a fixture storm. Body: { businessId | lat,lng, radiusMiles?, eventType?, severity?, durationMinutes? }." },
@@ -62,6 +64,36 @@ const PAYLOAD_EXAMPLE = `{
     "created_at": "2026-05-07T05:49:20.461Z",
     "distance_meters": 14
   }
+}`
+
+const ZIP_PAYLOAD_EXAMPLE = `{
+  "event_type": "storm_sentry.zip_insight.v1",
+  "fired_at": "2026-06-02T17:42:00.000Z",
+  "idempotency_key": "75201:https://api.weather.gov/alerts/urn:oid:...",
+  "zip": { "code": "75201", "lat": 32.7856, "lng": -96.7983 },
+  "storm": {
+    "id": "https://api.weather.gov/alerts/urn:oid:...",
+    "source": "nws",
+    "event_type": "Severe Thunderstorm Warning",
+    "severity": "Severe",
+    "headline": "Severe Thunderstorm Warning issued ...",
+    "area_desc": "Dallas, TX",
+    "expires_at": "2026-06-02T18:15:00Z",
+    "distance_meters": 4200,
+    "distance_miles": 2.61
+  },
+  "nowcast": {
+    "precipIntensity": 0.42,
+    "precipProbability": 80,
+    "windGust": 38.5,
+    "windSpeed": 18.2,
+    "temperature": 71.4,
+    "weatherCode": 8000,
+    "weatherLabel": "Thunderstorm",
+    "fetchedAt": "2026-06-02T17:42:10.000Z"
+  },
+  "status": "queued",
+  "created_at": "2026-06-02T17:42:00.000Z"
 }`
 
 export default function DeveloperPage() {
@@ -160,6 +192,26 @@ export default function DeveloperPage() {
           <CardContent>
             <pre className="overflow-x-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-100">
               {PAYLOAD_EXAMPLE}
+            </pre>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg border-zinc-200 bg-white">
+          <CardHeader>
+            <CardTitle className="text-base">
+              ZIP insight payload example
+            </CardTitle>
+            <CardDescription>
+              Sent on every <code>zip_insight_added</code> (subscribe with{" "}
+              <code>events: [&quot;zip_insight_added&quot;]</code> or{" "}
+              <code>&quot;*&quot;</code>). <code>nowcast</code> is null at fire
+              time and filled within seconds — pull enriched values from{" "}
+              <code>GET /api/zip-insights?enriched=true</code>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <pre className="overflow-x-auto rounded-md bg-zinc-950 p-4 text-xs text-zinc-100">
+              {ZIP_PAYLOAD_EXAMPLE}
             </pre>
           </CardContent>
         </Card>

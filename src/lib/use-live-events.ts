@@ -9,6 +9,8 @@ const ALL_TYPES = [
   "storm_added",
   "storm_updated",
   "storm_removed",
+  "zip_insight_added",
+  "zip_insight_updated",
   "match_created",
   "matches_pruned",
   "fixtures_cleared",
@@ -18,7 +20,9 @@ const ALL_TYPES = [
 export function useLiveEvents(onEvent: (event: BusEvent | { type: "hello"; at: string }) => void) {
   // Always read the latest callback without re-subscribing on every render.
   const cbRef = useRef(onEvent)
-  cbRef.current = onEvent
+  useEffect(() => {
+    cbRef.current = onEvent
+  })
 
   useEffect(() => {
     const es = new EventSource("/api/events")

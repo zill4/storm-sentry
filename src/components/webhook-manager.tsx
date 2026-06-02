@@ -76,9 +76,12 @@ export function WebhookManager() {
   }
 
   useEffect(() => {
-    refresh()
-    const id = setInterval(refresh, 4000)
-    return () => clearInterval(id)
+    const initial = setTimeout(() => void refresh(), 0)
+    const id = setInterval(() => void refresh(), 4000)
+    return () => {
+      clearTimeout(initial)
+      clearInterval(id)
+    }
   }, [])
 
   async function createSub(e: React.FormEvent) {

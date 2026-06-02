@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 import { getPollerStatus, listActiveStorms } from "@/lib/storms/store"
+import { budgetStatus } from "@/lib/tomorrow/budget"
+import { zipInsightStats } from "@/lib/zip-insights/store"
+import { zipCount } from "@/lib/zips/store"
 
 export const dynamic = "force-dynamic"
 
@@ -16,5 +19,8 @@ export function GET() {
     },
     poller,
     activeStormCount: storms.length,
+    zipCoverage: zipCount(),
+    zipInsights: zipInsightStats(),
+    tomorrow: budgetStatus(),
   })
 }

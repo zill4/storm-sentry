@@ -1,10 +1,13 @@
 import type { Business, StormMatch } from "@/lib/businesses/types"
 import type { StormEvent } from "@/lib/storms/types"
+import type { ZipInsightEvent } from "@/lib/zip-insights/types"
 
 export type BusEvent =
   | { type: "storm_added"; at: string; storm: StormEvent }
   | { type: "storm_updated"; at: string; storm: StormEvent }
   | { type: "storm_removed"; at: string; stormId: string }
+  | { type: "zip_insight_added"; at: string; insight: ZipInsightEvent }
+  | { type: "zip_insight_updated"; at: string; insight: ZipInsightEvent }
   | {
       type: "match_created"
       at: string
@@ -23,6 +26,9 @@ export type BusEvent =
         skippedNoGeometry: number
         expiredRemoved: number
         matchesCreated: number
+        zipInsightsCreated?: number
+        threatenedZips?: number
+        tomorrowEventsIngested?: number
       }
     }
 
