@@ -1,0 +1,1 @@
+ALTER TABLE "tomorrow_budget" ADD COLUMN "forecast_day_count" integer DEFAULT 0 NOT NULL;

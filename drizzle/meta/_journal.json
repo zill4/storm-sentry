@@ -15,6 +15,13 @@
       "when": 1780631212922,
       "tag": "0001_crazy_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781197040977,
+      "tag": "0002_small_thunderbird",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
 import { emit } from "@/lib/bus"
+import { persistZipInsight, pruneZipInsightRows } from "@/lib/db/persist"
 import { severityRank } from "@/lib/storms/types"
 import type { NowcastValues } from "@/lib/tomorrow/types"
 import type { ZipInsightEvent, ZipInsightSeed } from "./types"
@@ -57,6 +58,7 @@ export function upsertZipInsight(seed: ZipInsightSeed): {
       updatedAt: now,
     }
     store.events.set(id, updated)
+    persistZipInsight(updated)
     emit({ type: "zip_insight_updated", at: now, insight: updated })
     return { event: updated, created: false }
   }
@@ -80,8 +82,14 @@ export function upsertZipInsight(seed: ZipInsightSeed): {
     expiresAt: seed.expiresAt,
   }
   store.events.set(id, created)
+  persistZipInsight(created)
   emit({ type: "zip_insight_added", at: now, insight: created })
   return { event: created, created: true }
+}
+
+/** Boot-time restore from Postgres: populate memory without bus emits. */
+export function hydrateZipInsight(event: ZipInsightEvent): void {
+  getStore().events.set(event.id, event)
 }
 
 /** Attach Tomorrow.io nowcast data; promotes a queued insight to "enriched". */
@@ -97,6 +105,7 @@ export function setNowcast(id: string, nowcast: NowcastValues): void {
     updatedAt: now,
   }
   store.events.set(id, updated)
+  persistZipInsight(updated)
   emit({ type: "zip_insight_updated", at: now, insight: updated })
 }
 
@@ -109,6 +118,7 @@ export function markExported(ids: string[]): number {
     if (!existing || existing.status === "exported") continue
     const updated: ZipInsightEvent = { ...existing, status: "exported", updatedAt: now }
     store.events.set(id, updated)
+    persistZipInsight(updated)
     emit({ type: "zip_insight_updated", at: now, insight: updated })
     n++
   }
@@ -125,6 +135,7 @@ export function pruneZipInsights(activeStormIds: Set<string>): number {
       removed++
     }
   }
+  if (removed > 0) pruneZipInsightRows([...activeStormIds])
   return removed
 }
 

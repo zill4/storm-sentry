@@ -135,6 +135,48 @@ export function record(kind: BudgetKind): void {
   s.kindDay[kind]++
   s.totalCalls++
   if (kind !== "forecast") s.lastBackgroundCallAt = Date.now()
+  mirrorToDb(s)
+}
+
+// Write-through so a restart/redeploy resumes today's spend instead of
+// resetting to zero against the same upstream key.
+function mirrorToDb(s: State): void {
+  void import("@/lib/db/persist").then((m) =>
+    m.persistBudgetCounters({
+      dayKey: s.dayKey,
+      dayCount: s.dayCount,
+      kindDay: { ...s.kindDay },
+      hourWindowStart: s.hr.start,
+      hourCount: s.hr.count,
+      totalCalls: s.totalCalls,
+      totalThrottled: s.totalThrottled,
+    }),
+  )
+}
+
+/** Boot-time restore of today's counters from Postgres. */
+export function seedBudget(seed: {
+  dayKey: string
+  dayCount: number
+  kindDay: Record<BudgetKind, number>
+  hourWindowStart: number
+  hourCount: number
+  totalCalls: number
+  totalThrottled: number
+}): void {
+  const s = getState()
+  if (seed.dayKey !== s.dayKey) return // stale row from a previous UTC day
+  s.dayCount = Math.max(s.dayCount, seed.dayCount)
+  for (const k of Object.keys(s.kindDay) as BudgetKind[]) {
+    s.kindDay[k] = Math.max(s.kindDay[k], seed.kindDay[k] ?? 0)
+  }
+  // Resume the persisted hour window only if it's still current.
+  if (Date.now() - seed.hourWindowStart < 3_600_000) {
+    s.hr.start = seed.hourWindowStart
+    s.hr.count = Math.max(s.hr.count, seed.hourCount)
+  }
+  s.totalCalls = Math.max(s.totalCalls, seed.totalCalls)
+  s.totalThrottled = Math.max(s.totalThrottled, seed.totalThrottled)
 }
 
 // A 429 means the shared key's rate window is already spent — so stop calling
@@ -145,6 +187,7 @@ export function noteThrottled(): void {
   s.totalThrottled++
   s.cooldownUntil =
     Date.now() + Number(process.env.TOMORROW_COOLDOWN_SEC ?? 120) * 1000
+  mirrorToDb(s)
 }
 
 export function isEnabled(): boolean {

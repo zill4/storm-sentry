@@ -129,6 +129,7 @@ export const tomorrowBudget = pgTable("tomorrow_budget", {
   dayCount: integer("day_count").notNull().default(0),
   eventsDayCount: integer("events_day_count").notNull().default(0),
   nowcastDayCount: integer("nowcast_day_count").notNull().default(0),
+  forecastDayCount: integer("forecast_day_count").notNull().default(0),
   hourWindowStart: timestamp("hour_window_start", { withTimezone: true }).notNull().defaultNow(),
   hourCount: integer("hour_count").notNull().default(0),
   totalCalls: integer("total_calls").notNull().default(0),

@@ -1,4 +1,5 @@
 import { emit } from "@/lib/bus"
+import { deleteStormRow, persistStorm } from "@/lib/db/persist"
 import type { StormEvent } from "./types"
 
 export type PollerStatus = {
@@ -61,9 +62,15 @@ export function upsertStorm(storm: StormEvent): "created" | "updated" {
   const store = getStore()
   const existed = store.storms.has(storm.id)
   store.storms.set(storm.id, storm)
+  persistStorm(storm)
   const at = new Date().toISOString()
   emit(existed ? { type: "storm_updated", at, storm } : { type: "storm_added", at, storm })
   return existed ? "updated" : "created"
+}
+
+/** Boot-time restore from Postgres: populate memory without bus emits. */
+export function hydrateStorm(storm: StormEvent): void {
+  getStore().storms.set(storm.id, storm)
 }
 
 export function removeExpiredStorms(): number {
@@ -73,6 +80,7 @@ export function removeExpiredStorms(): number {
   for (const [id, s] of store.storms) {
     if (s.expiresAt && s.expiresAt < now) {
       store.storms.delete(id)
+      deleteStormRow(id)
       removed++
       emit({ type: "storm_removed", at: now, stormId: id })
     }

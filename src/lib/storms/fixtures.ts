@@ -69,6 +69,7 @@ export function clearFixtureStorms(): number {
       store.storms.delete(id)
       removed++
       emit({ type: "storm_removed", at, stormId: id })
+      void import("@/lib/db/persist").then((m) => m.deleteStormRow(id))
     }
   }
   if (removed > 0) {
