@@ -131,21 +131,31 @@
   }
 }
 
-/* Dark-themed maplibre controls to match the storm dashboard. */
+/* Paper-styled maplibre controls to match the field-instrument dashboard. */
 .maplibregl-ctrl-group {
-  background: rgba(10, 15, 28, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(6px);
+  background: #f7f5f0;
+  border: 1px solid #ddd8cc;
 }
 .maplibregl-ctrl-group button + button {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
-  filter: invert(1);
+  border-top: 1px solid #ddd8cc;
 }
 .maplibregl-ctrl-attrib {
-  background: rgba(10, 15, 28, 0.7) !important;
+  background: rgba(247, 245, 240, 0.85) !important;
 }
 .maplibregl-ctrl-attrib a {
-  color: rgba(228, 228, 231, 0.8) !important;
+  color: #6f6a5f !important;
+}
+
+/* Storm hover tooltip: render our own paper card, strip the default popup
+   chrome, and keep it from intercepting the pointer (avoids hover flicker). */
+.storm-popup {
+  pointer-events: none;
+}
+.storm-popup .maplibregl-popup-content {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+.storm-popup .maplibregl-popup-tip {
+  display: none;
 }

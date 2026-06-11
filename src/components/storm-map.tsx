@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Layer, Map, NavigationControl, Source } from "react-map-gl/maplibre"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Layer, Map, NavigationControl, Popup, Source } from "react-map-gl/maplibre"
 import type { MapRef } from "react-map-gl/maplibre"
 import type { StyleSpecification } from "maplibre-gl"
+import { centroid } from "@turf/turf"
 import "maplibre-gl/dist/maplibre-gl.css"
 
 import type { StormEvent } from "@/lib/storms/types"
@@ -20,7 +21,22 @@ type Props = {
   selectedId?: string | null
   onSelect?: (id: string | null) => void
   showRadar?: boolean
+  /** Bumped (seq) by list clicks only, so map clicks never trigger a fly. */
+  flyTo?: { id: string; seq: number } | null
+  /** Storms filtered out elsewhere render dimmed instead of disappearing. */
+  dimmedIds?: Set<string> | string[]
 }
+
+type HoverInfo =
+  | {
+      kind: "storm"
+      lng: number
+      lat: number
+      eventType: string
+      severity: string
+      areaDesc: string
+    }
+  | { kind: "zip"; lng: number; lat: number; zip: string; gust: number | null }
 
 // Light basemap from CARTO's public raster tiles — no API key required.
 const LIGHT_STYLE: StyleSpecification = {
@@ -92,10 +108,20 @@ export function StormMap({
   selectedId,
   onSelect,
   showRadar = true,
+  flyTo,
+  dimmedIds,
 }: Props) {
   const radarTiles = useRadarTiles(showRadar)
   const mapRef = useRef<MapRef | null>(null)
   const layerRef = useRef<StormThreeLayer | null>(null)
+  const [hover, setHover] = useState<HoverInfo | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const lastFlySeq = useRef(0)
+
+  const dimmed = useMemo(() => {
+    if (!dimmedIds) return new Set<string>()
+    return dimmedIds instanceof Set ? dimmedIds : new Set(dimmedIds)
+  }, [dimmedIds])
 
   // Add the three.js storm layer once the map's GL context is ready.
   function handleLoad() {
@@ -117,6 +143,21 @@ export function StormMap({
     layerRef.current?.setSelectedId(selectedId ?? null)
   }, [selectedId])
 
+  // Fly to a storm's centroid when a list click bumps flyTo.seq.
+  useEffect(() => {
+    if (!flyTo || flyTo.seq === lastFlySeq.current) return
+    lastFlySeq.current = flyTo.seq
+    const map = mapRef.current?.getMap()
+    const storm = storms.find((s) => s.id === flyTo.id)
+    if (!map || !storm?.geometry) return
+    const [lng, lat] = centroid(storm.geometry).geometry.coordinates
+    map.flyTo({
+      center: [lng, lat],
+      zoom: Math.max(map.getZoom(), 5.5),
+      duration: 900,
+    })
+  }, [flyTo, storms])
+
   const features = storms
     .filter((s) => s.geometry)
     .map((s) => ({
@@ -130,6 +171,7 @@ export function StormMap({
         areaDesc: s.areaDesc ?? "",
         color: severityHex(s.severity),
         selected: s.id === selectedId ? 1 : 0,
+        dimmed: dimmed.has(s.id) ? 1 : 0,
       },
     }))
 
@@ -151,6 +193,8 @@ export function StormMap({
         properties: {
           color: severityHex(z.severity),
           enriched: z.nowcast ? 1 : 0,
+          zip: z.zip,
+          gust: z.nowcast?.windGust ?? null,
         },
       })),
   }
@@ -163,16 +207,49 @@ export function StormMap({
         initialViewState={{ longitude: -96, latitude: 38.5, zoom: 3.5 }}
         mapStyle={LIGHT_STYLE}
         style={{ width: "100%", height: "100%" }}
-        interactiveLayerIds={["storm-fill"]}
+        interactiveLayerIds={["storm-fill", "zip-dots"]}
         onClick={(e) => {
-          const f = e.features?.[0]
+          const f = e.features?.find((ft) => ft.layer.id === "storm-fill")
           if (f && f.properties && onSelect) {
             onSelect(String(f.properties.id))
           } else if (onSelect) {
             onSelect(null)
           }
         }}
-        cursor="default"
+        onMouseMove={(e) => {
+          if (dragging) return
+          const f = e.features?.[0]
+          if (!f?.properties) {
+            setHover(null)
+            return
+          }
+          if (f.layer.id === "zip-dots") {
+            setHover({
+              kind: "zip",
+              lng: e.lngLat.lng,
+              lat: e.lngLat.lat,
+              zip: String(f.properties.zip ?? ""),
+              gust:
+                typeof f.properties.gust === "number" ? f.properties.gust : null,
+            })
+          } else {
+            setHover({
+              kind: "storm",
+              lng: e.lngLat.lng,
+              lat: e.lngLat.lat,
+              eventType: String(f.properties.eventType ?? ""),
+              severity: String(f.properties.severity ?? "Unknown"),
+              areaDesc: String(f.properties.areaDesc ?? ""),
+            })
+          }
+        }}
+        onMouseLeave={() => setHover(null)}
+        onDragStart={() => {
+          setDragging(true)
+          setHover(null)
+        }}
+        onDragEnd={() => setDragging(false)}
+        cursor={hover ? "pointer" : "default"}
       >
         <NavigationControl position="top-right" />
 
@@ -198,7 +275,12 @@ export function StormMap({
               "line-color": ["get", "color"],
               "line-blur": 12,
               "line-width": ["case", ["==", ["get", "selected"], 1], 18, 12],
-              "line-opacity": 0.65,
+              "line-opacity": [
+                "case",
+                ["==", ["get", "dimmed"], 1],
+                0.1,
+                0.65,
+              ],
             }}
           />
           <Layer
@@ -206,7 +288,14 @@ export function StormMap({
             type="fill"
             paint={{
               "fill-color": ["get", "color"],
-              "fill-opacity": ["case", ["==", ["get", "selected"], 1], 0.55, 0.3],
+              "fill-opacity": [
+                "case",
+                ["==", ["get", "selected"], 1],
+                0.55,
+                ["==", ["get", "dimmed"], 1],
+                0.08,
+                0.3,
+              ],
             }}
           />
           <Layer
@@ -215,6 +304,12 @@ export function StormMap({
             paint={{
               "line-color": ["get", "color"],
               "line-width": ["case", ["==", ["get", "selected"], 1], 2.5, 1.4],
+              "line-opacity": [
+                "case",
+                ["==", ["get", "dimmed"], 1],
+                0.15,
+                1,
+              ],
             }}
           />
         </Source>
@@ -243,6 +338,45 @@ export function StormMap({
             }}
           />
         </Source>
+
+        {hover && !dragging && (
+          <Popup
+            longitude={hover.lng}
+            latitude={hover.lat}
+            closeButton={false}
+            closeOnClick={false}
+            offset={12}
+            maxWidth="260px"
+            className="storm-popup"
+          >
+            <div className="rounded-xl border border-[#DDD8CC] bg-[#F7F5F0] px-3 py-2 text-[#201E1A] shadow-md">
+              {hover.kind === "storm" ? (
+                <>
+                  <div className="text-sm font-semibold">{hover.eventType}</div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[#6F6A5F]">
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: severityHex(hover.severity) }}
+                    />
+                    {hover.severity}
+                  </div>
+                  {hover.areaDesc && (
+                    <div className="mt-1 line-clamp-2 text-xs text-[#6F6A5F]">
+                      {hover.areaDesc}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="font-mono text-xs font-semibold tabular-nums">
+                  ZIP {hover.zip}
+                  {hover.gust != null
+                    ? ` · ${Math.round(hover.gust)} mph gust`
+                    : ""}
+                </div>
+              )}
+            </div>
+          </Popup>
+        )}
       </Map>
 
       <MapLegend />

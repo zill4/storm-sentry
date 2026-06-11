@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { MapPin, RefreshCw } from "lucide-react"
+import { MapPin, RefreshCw, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,7 @@ type Props = {
 
 const CARD = "rounded-2xl border border-[#DDD8CC] bg-[#F7F5F0] shadow-sm"
 const LABEL = "text-[11px] uppercase tracking-[0.08em] text-[#6F6A5F]"
+const SEVERITY_ORDER = ["Extreme", "Severe", "Moderate", "Minor", "Unknown"] as const
 
 export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) {
   const [storms, setStorms] = useState<StormEvent[]>(initialStorms)
@@ -31,7 +32,10 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [live, setLive] = useState(false)
   const [showRadar, setShowRadar] = useState(true)
+  const [typeFilter, setTypeFilter] = useState<string | null>(null)
+  const [flyTo, setFlyTo] = useState<{ id: string; seq: number } | null>(null)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const heroRef = useRef<HTMLDivElement | null>(null)
 
   async function refresh() {
     setRefreshing(true)
@@ -88,10 +92,34 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
     return { total: storms.length, severe, distinctZips, enriched }
   }, [storms, zipInsights])
 
+  // IDs the map should dim out while a type filter is active.
+  const dimmedIds = useMemo(() => {
+    if (!typeFilter) return undefined
+    return storms.filter((s) => s.eventType !== typeFilter).map((s) => s.id)
+  }, [storms, typeFilter])
+
+  function toggleTypeFilter(type: string) {
+    setTypeFilter((cur) => (cur === type ? null : type))
+  }
+
+  // List-row clicks select, fly the map, and scroll the hero panel into view.
+  // (Map clicks only select — flyTo.seq increments here, never on map clicks.)
+  function selectFromList(id: string) {
+    const next = selectedId === id ? null : id
+    setSelectedId(next)
+    if (next) {
+      setFlyTo((prev) => ({ id, seq: (prev?.seq ?? 0) + 1 }))
+      heroRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {/* Hero map panel */}
-      <Card className={`${CARD} gap-0 overflow-hidden p-0 lg:col-span-2`}>
+      <Card
+        ref={heroRef}
+        className={`${CARD} gap-0 overflow-hidden p-0 lg:col-span-2`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5">
           <div>
             <h1 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[#201E1A]">
@@ -147,6 +175,8 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
             selectedId={selectedId}
             onSelect={setSelectedId}
             showRadar={showRadar}
+            flyTo={flyTo}
+            dimmedIds={dimmedIds}
           />
         </div>
 
@@ -166,39 +196,67 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
 
       {/* Instrument rail */}
       <div className="flex flex-col gap-4">
-        <Card className={`${CARD} gap-3 p-5`}>
-          <div className={LABEL}>Alert level</div>
-          <AlertGauge severe={stats.severe} total={stats.total} />
+        <Card className={`${CARD} gap-3 p-5 transition-shadow hover:shadow-md`}>
+          <div className={LABEL}>Alerts by type</div>
+          <AlertsByType
+            storms={storms}
+            typeFilter={typeFilter}
+            onToggle={toggleTypeFilter}
+          />
         </Card>
 
-        <Card className={`${CARD} gap-3 p-5`}>
-          <div className={LABEL}>Severity mix</div>
-          <SeveritySpectrum storms={storms} />
+        <Card className={`${CARD} gap-3 p-5 transition-shadow hover:shadow-md`}>
+          <div className={LABEL}>Severity</div>
+          <SeverityBar storms={storms} />
         </Card>
 
-        <Card className="gap-2 rounded-2xl border border-transparent bg-[#D9F25C] p-5 text-[#201E1A] shadow-sm">
+        <Card className="gap-2.5 rounded-2xl border border-transparent bg-[#D9F25C] p-5 text-[#201E1A] shadow-sm">
           <div className="text-[11px] uppercase tracking-[0.08em] text-[#201E1A]/70">
             Threatened ZIPs
           </div>
-          <div className="font-mono text-4xl font-semibold tabular-nums">
-            {stats.distinctZips}
+          <div className="flex items-baseline gap-3">
+            <span className="font-mono text-4xl font-semibold tabular-nums">
+              {stats.distinctZips}
+            </span>
+            <span className="text-[11px] text-[#201E1A]/60">
+              {stats.enriched > 0
+                ? `${stats.enriched} enriched`
+                : "awaiting enrichment"}
+            </span>
           </div>
-          <div className="text-[11px] text-[#201E1A]/60">
-            {stats.enriched > 0
-              ? `${stats.enriched} nowcast-enriched`
-              : "awaiting nowcast enrichment"}
-          </div>
+          <WorstZips insights={zipInsights} />
           <Link
             href="/reports"
-            className="mt-2 inline-flex w-fit items-center rounded-full bg-[#201E1A] px-4 py-2 text-xs font-medium text-[#F7F5F0] transition hover:bg-[#201E1A]/90"
+            className="mt-1 inline-flex w-fit items-center rounded-full bg-[#201E1A] px-4 py-2 text-xs font-medium text-[#F7F5F0] transition hover:bg-[#201E1A]/90"
           >
             Open ZIP reports →
           </Link>
         </Card>
+      </div>
 
-        <Card className={`${CARD} flex h-[340px] flex-col gap-0 p-0`}>
-          <Tabs defaultValue="storms" className="flex min-h-0 flex-1 flex-col gap-0">
-            <div className="border-b border-[#DDD8CC] px-3 py-2.5">
+      {/* Full-width activity panel */}
+      <Card
+        className={`${CARD} gap-0 p-0 transition-shadow hover:shadow-md lg:col-span-3`}
+      >
+        <Tabs defaultValue="storms" className="gap-0">
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-[#DDD8CC] px-5 py-3">
+            <div>
+              <div className={LABEL}>Active alerts</div>
+              <h2 className="font-[family-name:var(--font-display)] text-xl tracking-tight text-[#201E1A]">
+                All activity.
+              </h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {typeFilter && (
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter(null)}
+                  className="flex items-center gap-1.5 rounded-full bg-[#E7E3DA] px-3 py-1 text-xs font-medium text-[#201E1A] transition hover:bg-[#DDD8CC]"
+                >
+                  {typeFilter}
+                  <X className="size-3" />
+                </button>
+              )}
               <TabsList variant="line" className="h-8">
                 <TabsTrigger
                   value="storms"
@@ -214,128 +272,200 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
                 </TabsTrigger>
               </TabsList>
             </div>
-            <TabsContent value="storms" className="min-h-0 flex-1 overflow-hidden">
-              <div className="flex h-full flex-col">
-                <ActiveStormsList
-                  storms={storms}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="zips" className="min-h-0 flex-1 overflow-hidden">
-              <div className="flex h-full flex-col">
-                <ZipInsightsList insights={zipInsights} />
-              </div>
-            </TabsContent>
-          </Tabs>
-        </Card>
-      </div>
+          </div>
+          <TabsContent value="storms">
+            <ActiveStormsList
+              storms={storms}
+              selectedId={selectedId}
+              typeFilter={typeFilter}
+              now={lastRefresh ? lastRefresh.getTime() : null}
+              onSelect={selectFromList}
+            />
+          </TabsContent>
+          <TabsContent value="zips">
+            <ZipInsightsList insights={zipInsights} />
+          </TabsContent>
+        </Tabs>
+      </Card>
     </div>
   )
 }
 
-// Ring gauge: severe-and-above alerts as a fraction of all active alerts.
-function AlertGauge({ severe, total }: { severe: number; total: number }) {
-  const r = 40
-  const circumference = 2 * Math.PI * r
-  const fraction = total > 0 ? Math.min(severe / total, 1) : 0
-  return (
-    <div className="relative mx-auto size-36">
-      <svg viewBox="0 0 100 100" className="size-full -rotate-90">
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          stroke="#E7E3DA"
-          strokeWidth="9"
-        />
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          stroke="#E8772E"
-          strokeWidth="9"
-          strokeLinecap="round"
-          strokeDasharray={`${fraction * circumference} ${circumference}`}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-mono text-3xl font-semibold tabular-nums text-[#201E1A]">
-          {severe}
-        </span>
-        <span className="text-[9px] uppercase tracking-[0.08em] text-[#6F6A5F]">
-          Severe &amp; above
-        </span>
-      </div>
-    </div>
-  )
-}
-
-const SPECTRUM_ORDER = ["Extreme", "Severe", "Moderate", "Minor", "Unknown"] as const
-const SPECTRUM_SLOTS = 24
-
-// Spectrum of thin bars: slots are allocated to severity buckets proportionally
-// to their storm counts (largest remainder); bar height tracks bucket size.
-function SeveritySpectrum({ storms }: { storms: StormEvent[] }) {
-  const bars = useMemo(() => {
-    const counts: Record<string, number> = {}
-    for (const k of SPECTRUM_ORDER) counts[k] = 0
+// Top event types by alert count; rows toggle the dashboard-wide type filter.
+function AlertsByType({
+  storms,
+  typeFilter,
+  onToggle,
+}: {
+  storms: StormEvent[]
+  typeFilter: string | null
+  onToggle: (type: string) => void
+}) {
+  const rows = useMemo(() => {
+    const byType = new Map<string, { count: number; topRank: number; topSeverity: string }>()
     for (const s of storms) {
-      const key = (SPECTRUM_ORDER as readonly string[]).includes(s.severity ?? "")
+      const cur =
+        byType.get(s.eventType) ?? { count: 0, topRank: -1, topSeverity: "Unknown" }
+      cur.count += 1
+      const rank = severityRank(s.severity)
+      if (rank > cur.topRank) {
+        cur.topRank = rank
+        cur.topSeverity = s.severity
+      }
+      byType.set(s.eventType, cur)
+    }
+    return [...byType.entries()]
+      .map(([type, v]) => ({ type, ...v }))
+      .sort((a, b) => b.count - a.count || b.topRank - a.topRank)
+      .slice(0, 6)
+  }, [storms])
+
+  if (rows.length === 0) {
+    return <div className="py-2 text-sm text-[#9B958A]">No active alerts.</div>
+  }
+
+  const maxCount = Math.max(...rows.map((r) => r.count), 1)
+
+  return (
+    <div className="flex flex-col gap-1">
+      {rows.map((r) => {
+        const active = typeFilter === r.type
+        return (
+          <button
+            key={r.type}
+            type="button"
+            onClick={() => onToggle(r.type)}
+            aria-pressed={active}
+            className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition ${
+              active
+                ? "bg-[#E7E3DA] ring-1 ring-[#201E1A]/25"
+                : "hover:bg-[#E7E3DA]/60"
+            }`}
+          >
+            <span className="min-w-0 flex-1 truncate text-sm text-[#201E1A]">
+              {r.type}
+            </span>
+            <span className="h-2 w-16 shrink-0 rounded-full bg-[#E7E3DA]">
+              <span
+                className="block h-2 rounded-full"
+                style={{
+                  width: `${Math.max((r.count / maxCount) * 100, 8)}%`,
+                  backgroundColor: severityHex(r.topSeverity),
+                }}
+              />
+            </span>
+            <span className="w-7 shrink-0 text-right font-mono text-sm tabular-nums text-[#201E1A]">
+              {r.count}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// One stacked bar, segments in rank order, plus a count legend.
+function SeverityBar({ storms }: { storms: StormEvent[] }) {
+  const counts = useMemo(() => {
+    const out: Record<string, number> = {}
+    for (const k of SEVERITY_ORDER) out[k] = 0
+    for (const s of storms) {
+      const key = (SEVERITY_ORDER as readonly string[]).includes(s.severity ?? "")
         ? (s.severity as string)
         : "Unknown"
-      counts[key] += 1
-    }
-    const total = storms.length
-    if (total === 0) return []
-
-    const alloc = SPECTRUM_ORDER.map((k) => {
-      const exact = (counts[k] / total) * SPECTRUM_SLOTS
-      return { k, n: Math.floor(exact), rem: exact - Math.floor(exact) }
-    })
-    let used = alloc.reduce((sum, a) => sum + a.n, 0)
-    const byRemainder = [...alloc].sort((a, b) => b.rem - a.rem)
-    for (let i = 0; used < SPECTRUM_SLOTS; i++, used++) {
-      byRemainder[i % byRemainder.length].n += 1
-    }
-
-    const maxCount = Math.max(...SPECTRUM_ORDER.map((k) => counts[k]), 1)
-    const out: { color: string; heightPct: number }[] = []
-    for (const { k, n } of alloc) {
-      const base = (counts[k] / maxCount) * 100
-      for (let j = 0; j < n; j++) {
-        // Slight deterministic ripple so a flat bucket still reads as a spectrum.
-        const ripple = [1, 0.84, 0.93][j % 3]
-        out.push({ color: severityHex(k), heightPct: Math.round(base * ripple) })
-      }
+      out[key] += 1
     }
     return out
   }, [storms])
 
+  const total = storms.length
+
   return (
-    <div className="flex h-16 items-end gap-[3px]">
-      {bars.length > 0
-        ? bars.map((b, i) => (
+    <div className="flex flex-col gap-3">
+      <div className="flex h-3 overflow-hidden rounded-full bg-[#E7E3DA]">
+        {total > 0 &&
+          SEVERITY_ORDER.filter((k) => counts[k] > 0).map((k) => (
             <div
-              key={i}
-              className="flex-1 rounded-t"
+              key={k}
+              title={`${k} — ${counts[k]} alerts`}
+              className="transition hover:opacity-80"
               style={{
-                height: `${b.heightPct}%`,
-                minHeight: 4,
-                backgroundColor: b.color,
+                width: `${(counts[k] / total) * 100}%`,
+                backgroundColor: severityHex(k),
               }}
             />
-          ))
-        : Array.from({ length: SPECTRUM_SLOTS }).map((_, i) => (
-            <div
-              key={i}
-              className="flex-1 rounded-t bg-[#DDD8CC]"
-              style={{ height: 4 }}
-            />
           ))}
+      </div>
+      <div className="flex flex-col gap-1">
+        {SEVERITY_ORDER.map((k) => (
+          <div key={k} className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2 text-[#6F6A5F]">
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: severityHex(k) }}
+              />
+              {k}
+            </span>
+            <span className="font-mono tabular-nums text-[#201E1A]">
+              {counts[k]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Three worst threatened ZIPs (highest severity, then closest to the storm).
+function WorstZips({ insights }: { insights: ZipInsightEvent[] }) {
+  const worst = useMemo(() => {
+    const sorted = [...insights].sort((a, b) => {
+      const sev = severityRank(b.severity) - severityRank(a.severity)
+      if (sev !== 0) return sev
+      return a.distanceMeters - b.distanceMeters
+    })
+    const seen = new Set<string>()
+    const out: ZipInsightEvent[] = []
+    for (const z of sorted) {
+      if (seen.has(z.zip)) continue
+      seen.add(z.zip)
+      out.push(z)
+      if (out.length === 3) break
+    }
+    return out
+  }, [insights])
+
+  if (worst.length === 0) {
+    return (
+      <div className="text-[11px] text-[#201E1A]/60">
+        Threatened ZIPs appear here as storms move in.
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {worst.map((z) => (
+        <div
+          key={z.id}
+          className="flex items-center justify-between gap-3 rounded-lg bg-[#201E1A]/5 px-3 py-2 transition hover:bg-[#201E1A]/10"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: severityHex(z.severity) }}
+            />
+            <span className="font-mono text-sm font-semibold tabular-nums">
+              {z.zip}
+            </span>
+          </span>
+          <span className="shrink-0 font-mono text-xs tabular-nums text-[#201E1A]/70">
+            {z.nowcast?.windGust != null
+              ? `${Math.round(z.nowcast.windGust)} mph`
+              : `${(z.distanceMeters / 1609.344).toFixed(1)} mi`}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -352,69 +482,121 @@ function formatTime(iso: string | null): string {
   })
 }
 
+// Time-pressure chip: red inside 30 minutes, orange inside 2 hours, quiet after.
+function urgencyChip(
+  expiresAt: string | null,
+  now: number | null,
+): { label: string; className: string } {
+  const neutral = "bg-[#E7E3DA] text-[#6F6A5F]"
+  if (!expiresAt) return { label: "no end time", className: neutral }
+  const t = new Date(expiresAt).getTime()
+  if (Number.isNaN(t)) return { label: "no end time", className: neutral }
+  const absolute = {
+    label: `ends ${new Date(t).toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    })}`,
+    className: neutral,
+  }
+  // Before the client clock ticks (SSR + first paint), stay absolute/neutral.
+  if (now == null) return absolute
+  const mins = Math.round((t - now) / 60_000)
+  if (mins <= 0) return { label: "expired", className: neutral }
+  if (mins < 30) {
+    return {
+      label: `ends in ${mins}m`,
+      className: "bg-[#D9482B]/10 text-[#D9482B]",
+    }
+  }
+  if (mins < 120) {
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    return {
+      label: `ends in ${h > 0 ? `${h}h ${m}m` : `${m}m`}`,
+      className: "bg-[#F2915C]/20 text-[#B55A1D]",
+    }
+  }
+  return absolute
+}
+
 function ActiveStormsList({
   storms,
   selectedId,
+  typeFilter,
+  now,
   onSelect,
 }: {
   storms: StormEvent[]
   selectedId: string | null
-  onSelect: (id: string | null) => void
+  typeFilter: string | null
+  /** Clock for the urgency chips (the dashboard's last-refresh time). */
+  now: number | null
+  onSelect: (id: string) => void
 }) {
   const sorted = useMemo(() => {
-    return [...storms].sort((a, b) => {
-      const sev = severityRank(b.severity) - severityRank(a.severity)
-      if (sev !== 0) return sev
-      return (b.startedAt ?? "").localeCompare(a.startedAt ?? "")
-    })
-  }, [storms])
+    return [...storms]
+      .filter((s) => !typeFilter || s.eventType === typeFilter)
+      .sort((a, b) => {
+        const sev = severityRank(b.severity) - severityRank(a.severity)
+        if (sev !== 0) return sev
+        return (b.startedAt ?? "").localeCompare(a.startedAt ?? "")
+      })
+      .slice(0, 30)
+  }, [storms, typeFilter])
 
   if (sorted.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-[#9B958A]">
-        No active alerts right now. The feed refreshes automatically.
+      <div className="px-6 py-12 text-center text-sm text-[#9B958A]">
+        {typeFilter
+          ? `No active ${typeFilter} alerts. Clear the filter to see everything.`
+          : "No active alerts right now. The feed refreshes automatically."}
       </div>
     )
   }
 
   return (
-    <div className="flex-1 space-y-2 overflow-y-auto p-3">
+    <div>
       {sorted.map((s) => {
         const selected = s.id === selectedId
         const color = severityHex(s.severity)
+        const chip = urgencyChip(s.expiresAt, now)
         return (
           <button
             key={s.id}
             type="button"
-            onClick={() => onSelect(selected ? null : s.id)}
-            className={`w-full rounded-lg border p-3 text-left transition ${
-              selected
-                ? "border-[#201E1A]/25 bg-[#E7E3DA]"
-                : "border-[#DDD8CC] bg-[#F7F5F0] hover:bg-[#E7E3DA]"
+            onClick={() => onSelect(s.id)}
+            className={`grid w-full cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-1 border-b border-[#DDD8CC] px-4 py-3 text-left transition last:border-0 sm:grid-cols-[auto_1fr_auto_auto] ${
+              selected ? "bg-[#E7E3DA]" : "hover:bg-[#E7E3DA]/60"
             }`}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-sm font-medium text-[#201E1A]">
+            <Badge
+              variant="outline"
+              className="w-20 justify-center border-transparent text-[10px] font-semibold uppercase tracking-wide"
+              style={{ color, backgroundColor: `${color}22` }}
+            >
+              {s.severity}
+            </Badge>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium text-[#201E1A]">
                 {s.eventType}
               </span>
-              <Badge
-                variant="outline"
-                className="shrink-0 border-transparent text-[10px] font-semibold uppercase tracking-wide"
-                style={{ color, backgroundColor: `${color}22` }}
-              >
-                {s.severity}
-              </Badge>
-            </div>
-            {s.areaDesc && (
-              <div className="mt-1.5 flex items-start gap-1.5 text-xs text-[#6F6A5F]">
-                <MapPin className="mt-0.5 size-3 shrink-0 text-[#9B958A]" />
-                <span className="line-clamp-2">{s.areaDesc}</span>
-              </div>
-            )}
-            <div className="mt-1.5 text-[11px] tabular-nums text-[#9B958A]">
+              {s.areaDesc && (
+                <span className="mt-0.5 flex items-start gap-1.5 text-xs text-[#6F6A5F]">
+                  <MapPin className="mt-0.5 size-3 shrink-0 text-[#9B958A]" />
+                  <span className="line-clamp-2">{s.areaDesc}</span>
+                </span>
+              )}
+            </span>
+            <span className="hidden text-[11px] tabular-nums text-[#9B958A] sm:block">
               {formatTime(s.startedAt)}
               {s.expiresAt ? ` → ${formatTime(s.expiresAt)}` : ""}
-            </div>
+            </span>
+            <span
+              suppressHydrationWarning
+              className={`w-fit justify-self-end rounded-full px-2.5 py-1 text-[11px] font-medium tabular-nums ${chip.className}`}
+            >
+              {chip.label}
+            </span>
           </button>
         )
       })}
@@ -430,12 +612,12 @@ function ZipInsightsList({ insights }: { insights: ZipInsightEvent[] }) {
         if (sev !== 0) return sev
         return a.distanceMeters - b.distanceMeters
       })
-      .slice(0, 250)
+      .slice(0, 40)
   }, [insights])
 
   if (sorted.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-[#9B958A]">
+      <div className="px-6 py-12 text-center text-sm text-[#9B958A]">
         No ZIP codes under active storms. Threatened ZIPs appear here as storms
         move in.
       </div>
@@ -443,7 +625,7 @@ function ZipInsightsList({ insights }: { insights: ZipInsightEvent[] }) {
   }
 
   return (
-    <div className="flex-1 space-y-2 overflow-y-auto p-3">
+    <div>
       {sorted.map((z) => {
         const color = severityHex(z.severity)
         const miles = (z.distanceMeters / 1609.344).toFixed(1)
@@ -451,39 +633,49 @@ function ZipInsightsList({ insights }: { insights: ZipInsightEvent[] }) {
         return (
           <div
             key={z.id}
-            className="rounded-lg border border-[#DDD8CC] bg-[#F7F5F0] p-3 hover:bg-[#E7E3DA]"
+            className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#DDD8CC] px-4 py-2.5 transition last:border-0 hover:bg-[#E7E3DA]/60"
           >
-            <div className="flex items-center justify-between gap-2">
+            <span className="flex w-24 shrink-0 items-center gap-2">
+              <span
+                className="size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: color }}
+              />
               <span className="font-mono text-sm font-semibold tabular-nums text-[#201E1A]">
                 {z.zip}
               </span>
-              <Badge
-                variant="outline"
-                className="shrink-0 border-transparent text-[10px] font-semibold uppercase tracking-wide"
-                style={{ color, backgroundColor: `${color}22` }}
-              >
-                {z.severity}
-              </Badge>
-            </div>
-            <div className="mt-1 truncate text-xs text-[#6F6A5F]">
+            </span>
+            <span className="min-w-0 flex-1 truncate text-xs text-[#6F6A5F]">
               {z.eventType}
-              <span className="text-[#9B958A]"> · {miles} mi from center</span>
-            </div>
-            {n ? (
-              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums text-[#6F6A5F]">
-                {n.windGust != null && <span>{Math.round(n.windGust)} mph gust</span>}
-                {n.precipIntensity != null && (
-                  <span>{n.precipIntensity.toFixed(2)} in/hr</span>
-                )}
-                {n.weatherLabel && (
-                  <span className="text-[#9B958A]">{n.weatherLabel}</span>
-                )}
-              </div>
-            ) : (
-              <div className="mt-1.5 text-[11px] text-[#9B958A]">
-                Queued · nowcast pending
-              </div>
-            )}
+            </span>
+            <span className="w-16 shrink-0 text-right font-mono text-xs tabular-nums text-[#9B958A]">
+              {miles} mi
+            </span>
+            <span className="flex shrink-0 flex-wrap items-center gap-1.5">
+              {n?.windGust != null && (
+                <span className="rounded-full bg-[#E7E3DA] px-2 py-0.5 text-[11px] tabular-nums text-[#6F6A5F]">
+                  {Math.round(n.windGust)} mph gust
+                </span>
+              )}
+              {n?.precipIntensity != null && (
+                <span className="rounded-full bg-[#E7E3DA] px-2 py-0.5 text-[11px] tabular-nums text-[#6F6A5F]">
+                  {n.precipIntensity.toFixed(2)} in/hr
+                </span>
+              )}
+              {n?.weatherLabel && (
+                <span className="rounded-full bg-[#E7E3DA] px-2 py-0.5 text-[11px] text-[#6F6A5F]">
+                  {n.weatherLabel}
+                </span>
+              )}
+              <span
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                  n
+                    ? "bg-[#D9F25C]/60 text-[#201E1A]"
+                    : "bg-[#E7E3DA] text-[#6F6A5F]"
+                }`}
+              >
+                {n ? "enriched" : "queued"}
+              </span>
+            </span>
           </div>
         )
       })}

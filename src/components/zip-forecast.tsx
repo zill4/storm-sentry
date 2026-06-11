@@ -274,8 +274,8 @@ function HourlyChartCard({ hours }: { hours: ForecastHour[] }) {
             title={`${hourLabel(h.time)} — ${temp(h.temperature)}, ${pct(
               h.precipProbability
             )} precip`}
-            className={`flex-1 rounded-t-md ${
-              i === 0 ? "bg-[#201E1A]" : "bg-[#DDD8CC]"
+            className={`flex-1 rounded-t-md transition-colors ${
+              i === 0 ? "bg-[#201E1A]" : "bg-[#DDD8CC] hover:bg-[#9B958A]"
             }`}
             style={{ height: `${heightPct(h.temperature)}%` }}
           />
@@ -338,7 +338,7 @@ function DailyOutlookCard({ forecast }: { forecast: NormalizedForecast }) {
           return (
             <div
               key={d.date}
-              className="flex items-center gap-3 px-5 py-3 text-sm"
+              className="flex items-center gap-3 px-5 py-3 text-sm transition hover:bg-[#E7E3DA]/60"
             >
               <div className="w-24 shrink-0">
                 <span className="font-medium text-[#201E1A]">
