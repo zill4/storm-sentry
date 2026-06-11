@@ -10,6 +10,22 @@ declare global {
   var __stormSentryNowcastCache:
     | Map<string, { values: NowcastValues; at: number }>
     | undefined
+  // eslint-disable-next-line no-var
+  var __stormSentryNowcastFailures: Map<string, number> | undefined
+}
+
+// Negative cache: a ZIP whose enrichment just failed (429/500) is skipped for a
+// while instead of being retried every poll cycle — otherwise a handful of
+// failing ZIPs can burn the entire budget making zero progress.
+function failures(): Map<string, number> {
+  if (!globalThis.__stormSentryNowcastFailures) {
+    globalThis.__stormSentryNowcastFailures = new Map()
+  }
+  return globalThis.__stormSentryNowcastFailures
+}
+
+function failTtlMs(): number {
+  return Number(process.env.TOMORROW_NOWCAST_FAIL_TTL_MIN ?? 10) * 60_000
 }
 
 function cache(): Map<string, { values: NowcastValues; at: number }> {
@@ -43,6 +59,11 @@ export async function enrichZip(zip: string): Promise<EnrichResult> {
   const cached = getCachedNowcast(zip)
   if (cached) return { values: cached, cached: true, spent: false }
 
+  const failedAt = failures().get(zip)
+  if (failedAt && Date.now() - failedAt < failTtlMs()) {
+    return { values: null, cached: false, spent: false }
+  }
+
   try {
     const res = await getRealtime(`${zip} US`)
     const v = res.data.values
@@ -63,8 +84,10 @@ export async function enrichZip(zip: string): Promise<EnrichResult> {
       fetchedAt: new Date().toISOString(),
     }
     cache().set(zip, { values, at: Date.now() })
+    failures().delete(zip)
     return { values, cached: false, spent: true }
   } catch (err) {
+    failures().set(zip, Date.now())
     // Budget exhaustion is expected back-pressure, not an error worth logging.
     if (!(err instanceof TomorrowBudgetExceeded)) {
       console.error(`[nowcast] enrich ${zip} failed`, err)

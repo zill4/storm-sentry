@@ -46,10 +46,13 @@ TOMORROW_IO_API_KEY="..."                          # Tomorrow.io API key
 # Optional tuning (defaults shown)
 ENABLE_TOMORROW=true                  # set false to run NWS-only
 TOMORROW_DAILY_BUDGET=480             # daily call cap (headroom under 500)
-TOMORROW_NOWCAST_SHARE=0.65           # fraction of the daily budget for nowcast
+TOMORROW_NOWCAST_SHARE=0.55           # daily-budget share for storm nowcasts
+TOMORROW_FORECAST_SHARE=0.25          # daily-budget share for the /forecast page
 TOMORROW_NOWCAST_PER_CYCLE=5          # max fresh nowcast fetches per poll
 TOMORROW_NOWCAST_TTL_MIN=20           # per-ZIP nowcast cache lifetime (min)
+FORECAST_CACHE_TTL_MIN=60             # per-ZIP forecast cache lifetime (min)
 TOMORROW_EVENTS_INTERVAL_SECONDS=1800 # CONUS events sweep cadence
+# DATABASE_URL=postgres://…           # enables the Postgres datastore (else in-memory)
 POLL_INTERVAL_SECONDS=60              # NWS poll cadence
 ENABLE_NWS_POLLER=true
 ```
@@ -82,3 +85,23 @@ Required service **Variables** (the local `.env.local` is *not* deployed):
 | POST | `/api/replay/inject` | Inject a fixture storm. |
 
 See the in-app **Developer** page for payload examples.
+
+## Connecting GoHighLevel (planned v1)
+
+No Zapier needed — two complementary paths:
+
+1. **Push (works today):** create a GHL Workflow with an **Inbound Webhook** trigger, then register its URL via `POST /api/webhooks` with `events: ["zip_insight_added"]`. GHL receives `storm_sentry.zip_insight.v1` payloads (ZIP + storm + nowcast) and maps fields to actions.
+2. **Pull/match (next):** when a storm produces its threatened-ZIP set, call GHL `POST /contacts/search` filtered to those ZIPs (exact postal-code match — *we* own the geometry, GHL never needs radius search), then tag/enroll the matched contacts. Needs a **Private Integration token**:
+
+```bash
+# GHL_PRIVATE_TOKEN="..."   # GHL Settings → Private Integrations (contacts scope)
+# GHL_LOCATION_ID="..."     # the sub-account to search/act in
+```
+
+⚠️ Before connecting for real: a single big storm can create **hundreds** of ZIP insights in one poll cycle, and the dispatcher fires one webhook per insight. Subscribe GHL only to filtered, deduplicated triggers (or batch per storm) — otherwise one tornado outbreak = hundreds of workflow executions. GHL's API is also rate-limited; calls must go through a budget gate like Tomorrow.io's.
+
+## Demo endpoints in production
+
+`/api/replay/*` and `/api/poll-now` are **blocked on production builds** unless
+`ALLOW_DEMO_ENDPOINTS=true` is set — fixture injection fires real webhooks, so
+it must not be publicly callable on a live deploy.

@@ -138,3 +138,76 @@ export function weatherLabel(code: number | null | undefined): string | null {
   if (code == null) return null
   return WEATHER_CODES[code] ?? null
 }
+
+// ---- Weather Forecast (GET /v4/weather/forecast) ----
+// timelines: { minutely (premium only), hourly (120h), daily (5d) }, each
+// { time, values }. Daily field names aren't documented, so the schema lists
+// every plausible variant (all optional) and normalizeForecast picks the best.
+const ForecastValuesSchema = z.object({
+  temperature: z.number().nullable().optional(),
+  temperatureApparent: z.number().nullable().optional(),
+  temperatureMin: z.number().nullable().optional(),
+  temperatureMax: z.number().nullable().optional(),
+  windGust: z.number().nullable().optional(),
+  windGustMax: z.number().nullable().optional(),
+  windGustAvg: z.number().nullable().optional(),
+  windSpeed: z.number().nullable().optional(),
+  precipitationProbability: z.number().nullable().optional(),
+  precipitationProbabilityAvg: z.number().nullable().optional(),
+  precipitationProbabilityMax: z.number().nullable().optional(),
+  rainIntensity: z.number().nullable().optional(),
+  rainIntensityAvg: z.number().nullable().optional(),
+  rainIntensityMax: z.number().nullable().optional(),
+  sleetIntensity: z.number().nullable().optional(),
+  snowIntensity: z.number().nullable().optional(),
+  freezingRainIntensity: z.number().nullable().optional(),
+  weatherCode: z.number().nullable().optional(),
+  weatherCodeMax: z.number().nullable().optional(),
+  weatherCodeMin: z.number().nullable().optional(),
+})
+const ForecastEntrySchema = z.object({
+  time: z.string(),
+  values: ForecastValuesSchema,
+})
+export const ForecastResponseSchema = z.object({
+  timelines: z.object({
+    minutely: z.array(ForecastEntrySchema).nullable().optional(),
+    hourly: z.array(ForecastEntrySchema).nullable().optional(),
+    daily: z.array(ForecastEntrySchema).nullable().optional(),
+  }),
+  location: z
+    .object({
+      lat: z.number().optional(),
+      lon: z.number().optional(),
+      name: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+})
+export type ForecastResponse = z.infer<typeof ForecastResponseSchema>
+
+export type ForecastHour = {
+  time: string
+  temperature: number | null
+  precipProbability: number | null
+  precipIntensity: number | null
+  windGust: number | null
+  weatherCode: number | null
+  weatherLabel: string | null
+}
+export type ForecastDay = {
+  date: string
+  tempMin: number | null
+  tempMax: number | null
+  precipProbability: number | null
+  windGust: number | null
+  weatherCode: number | null
+  weatherLabel: string | null
+}
+export type NormalizedForecast = {
+  zip: string
+  location: { name: string | null; lat: number | null; lon: number | null }
+  hourly: ForecastHour[]
+  daily: ForecastDay[]
+  fetchedAt: string
+}

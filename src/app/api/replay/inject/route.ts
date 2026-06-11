@@ -3,6 +3,10 @@ import { z } from "zod"
 
 import { runMatcher } from "@/lib/businesses/matcher"
 import { getBusiness } from "@/lib/businesses/store"
+import {
+  demoEndpointsBlockedResponse,
+  demoEndpointsEnabled,
+} from "@/lib/demo-guard"
 import { injectFixtureStorm } from "@/lib/storms/fixtures"
 
 export const dynamic = "force-dynamic"
@@ -30,6 +34,7 @@ const BodySchema = z
   )
 
 export async function POST(req: Request) {
+  if (!demoEndpointsEnabled()) return demoEndpointsBlockedResponse()
   let raw: unknown
   try {
     raw = await req.json()

@@ -29,6 +29,8 @@ const CONUS_EAST: number[][][] = [
 declare global {
   // eslint-disable-next-line no-var
   var __stormSentryEventsPollAt: number | undefined
+  // eslint-disable-next-line no-var
+  var __stormSentryEventsPolygonIdx: number | undefined
 }
 
 // US Tomorrow.io events are re-served NWS alerts; their link embeds the NWS
@@ -124,7 +126,14 @@ export async function pollTomorrowEvents(opts?: {
   let deduped = 0
   let skippedNoGeometry = 0
 
-  for (const polygon of [CONUS_WEST, CONUS_EAST]) {
+  // One polygon per sweep, alternating west/east. Two back-to-back calls would
+  // trip the background-call spacing (TOMORROW_MIN_CALL_INTERVAL_SEC) and
+  // permanently starve the second polygon; alternating covers all of CONUS
+  // across consecutive sweeps at half the cost.
+  const idx = (globalThis.__stormSentryEventsPolygonIdx ?? 0) % 2
+  globalThis.__stormSentryEventsPolygonIdx = idx + 1
+
+  for (const polygon of [idx === 0 ? CONUS_WEST : CONUS_EAST]) {
     let events: TomorrowEvent[]
     try {
       events = await getEvents(polygon, INSIGHT_CATEGORIES)

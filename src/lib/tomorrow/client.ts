@@ -6,7 +6,9 @@ import {
 } from "./budget"
 import {
   EventsResponseSchema,
+  ForecastResponseSchema,
   RealtimeResponseSchema,
+  type ForecastResponse,
   type RealtimeResponse,
   type TomorrowEvent,
 } from "./types"
@@ -67,6 +69,16 @@ export function getRealtime(location: string): Promise<RealtimeResponse> {
     "nowcast",
     () => fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15_000) }),
     (json) => RealtimeResponseSchema.parse(json),
+  )
+}
+
+/** Hourly (120h) + daily (5d) forecast for a location. */
+export function getForecast(location: string): Promise<ForecastResponse> {
+  const url = `${BASE}/weather/forecast?location=${encodeURIComponent(location)}&units=imperial&apikey=${apiKey()}`
+  return spend(
+    "forecast",
+    () => fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15_000) }),
+    (json) => ForecastResponseSchema.parse(json),
   )
 }
 

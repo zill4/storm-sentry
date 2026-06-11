@@ -7,13 +7,14 @@
 // The daily budget is split between two consumers: `events` (the CONUS
 // severe-weather sweep) and `nowcast` (per-ZIP enrichment, the unique value).
 
-export type BudgetKind = "events" | "nowcast"
+export type BudgetKind = "events" | "nowcast" | "forecast"
 
 type State = {
   perSecond: number
   perHour: number
   perDay: number
   nowcastShare: number
+  forecastShare: number
   enabled: boolean
   sec: { start: number; count: number }
   hr: { start: number; count: number }
@@ -22,6 +23,8 @@ type State = {
   kindDay: Record<BudgetKind, number>
   totalCalls: number
   totalThrottled: number
+  cooldownUntil: number
+  lastBackgroundCallAt: number
 }
 
 declare global {
@@ -44,7 +47,8 @@ function getState(): State {
       perSecond: Number(process.env.TOMORROW_PER_SECOND ?? 3),
       perHour: Number(process.env.TOMORROW_PER_HOUR ?? 25),
       perDay: Number(process.env.TOMORROW_DAILY_BUDGET ?? 480),
-      nowcastShare: clamp(Number(process.env.TOMORROW_NOWCAST_SHARE ?? 0.65), 0, 1),
+      nowcastShare: clamp(Number(process.env.TOMORROW_NOWCAST_SHARE ?? 0.55), 0, 1),
+      forecastShare: clamp(Number(process.env.TOMORROW_FORECAST_SHARE ?? 0.25), 0, 1),
       enabled:
         Boolean(process.env.TOMORROW_IO_API_KEY) &&
         process.env.ENABLE_TOMORROW !== "false",
@@ -52,9 +56,11 @@ function getState(): State {
       hr: { start: now, count: 0 },
       dayKey: utcDayKey(now),
       dayCount: 0,
-      kindDay: { events: 0, nowcast: 0 },
+      kindDay: { events: 0, nowcast: 0, forecast: 0 },
       totalCalls: 0,
       totalThrottled: 0,
+      cooldownUntil: 0,
+      lastBackgroundCallAt: 0,
     }
   }
   return globalThis.__stormSentryTomorrowBudget
@@ -73,26 +79,50 @@ function roll(s: State, now: number): void {
   if (dk !== s.dayKey) {
     s.dayKey = dk
     s.dayCount = 0
-    s.kindDay = { events: 0, nowcast: 0 }
+    s.kindDay = { events: 0, nowcast: 0, forecast: 0 }
   }
 }
 
 function allocations(s: State): Record<BudgetKind, number> {
   const nowcast = Math.floor(s.perDay * s.nowcastShare)
-  return { nowcast, events: s.perDay - nowcast }
+  const forecast = Math.floor(s.perDay * s.forecastShare)
+  const events = Math.max(0, s.perDay - nowcast - forecast)
+  return { nowcast, forecast, events }
+}
+
+export type BudgetBlock =
+  | "second"
+  | "hour"
+  | "day"
+  | "kind"
+  | "cooldown"
+  | "spacing"
+  | "disabled"
+  | null
+
+/** Why a call of `kind` can't fire right now (or null if it can). */
+export function budgetBlockReason(kind: BudgetKind): BudgetBlock {
+  if (process.env.TOMORROW_OFFLINE === "true") return "disabled"
+  const s = getState()
+  if (!s.enabled) return "disabled"
+  if (Date.now() < s.cooldownUntil) return "cooldown"
+  roll(s, Date.now())
+  if (s.sec.count >= s.perSecond) return "second"
+  if (s.hr.count >= s.perHour) return "hour"
+  if (s.dayCount >= s.perDay) return "day"
+  if (s.kindDay[kind] >= allocations(s)[kind]) return "kind"
+  // Background calls (the storm poller) are spaced out so they sip the budget
+  // and leave headroom; forecast (on-demand + cached) is exempt.
+  if (kind !== "forecast") {
+    const minMs = Number(process.env.TOMORROW_MIN_CALL_INTERVAL_SEC ?? 0) * 1000
+    if (minMs > 0 && Date.now() - s.lastBackgroundCallAt < minMs) return "spacing"
+  }
+  return null
 }
 
 /** True if a call of the given kind can fire now within every rate window. */
 export function canSpend(kind: BudgetKind): boolean {
-  const s = getState()
-  if (!s.enabled) return false
-  const now = Date.now()
-  roll(s, now)
-  if (s.sec.count >= s.perSecond) return false
-  if (s.hr.count >= s.perHour) return false
-  if (s.dayCount >= s.perDay) return false
-  if (s.kindDay[kind] >= allocations(s)[kind]) return false
-  return true
+  return budgetBlockReason(kind) === null
 }
 
 /** Record that a call of the given kind fired. Call right before the fetch. */
@@ -104,10 +134,17 @@ export function record(kind: BudgetKind): void {
   s.dayCount++
   s.kindDay[kind]++
   s.totalCalls++
+  if (kind !== "forecast") s.lastBackgroundCallAt = Date.now()
 }
 
+// A 429 means the shared key's rate window is already spent — so stop calling
+// entirely for a cooldown instead of burning the rest of our local budget on
+// calls that are guaranteed to 429 too.
 export function noteThrottled(): void {
-  getState().totalThrottled++
+  const s = getState()
+  s.totalThrottled++
+  s.cooldownUntil =
+    Date.now() + Number(process.env.TOMORROW_COOLDOWN_SEC ?? 120) * 1000
 }
 
 export function isEnabled(): boolean {
@@ -123,6 +160,8 @@ export type BudgetStatus = {
   byKind: Record<BudgetKind, { allocation: number; usedToday: number; remaining: number }>
   totalCalls: number
   totalThrottled: number
+  cooldownActive: boolean
+  cooldownSecondsLeft: number
 }
 
 export function budgetStatus(): BudgetStatus {
@@ -149,8 +188,15 @@ export function budgetStatus(): BudgetStatus {
         usedToday: s.kindDay.nowcast,
         remaining: Math.max(0, alloc.nowcast - s.kindDay.nowcast),
       },
+      forecast: {
+        allocation: alloc.forecast,
+        usedToday: s.kindDay.forecast,
+        remaining: Math.max(0, alloc.forecast - s.kindDay.forecast),
+      },
     },
     totalCalls: s.totalCalls,
     totalThrottled: s.totalThrottled,
+    cooldownActive: Date.now() < s.cooldownUntil,
+    cooldownSecondsLeft: Math.max(0, Math.ceil((s.cooldownUntil - Date.now()) / 1000)),
   }
 }
