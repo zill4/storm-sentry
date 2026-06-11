@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { MapPin, RefreshCw, Radar } from "lucide-react"
+import Link from "next/link"
+import { MapPin, RefreshCw } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,7 @@ type Props = {
 }
 
 const CARD = "rounded-2xl border border-[#DDD8CC] bg-[#F7F5F0] shadow-sm"
+const LABEL = "text-[11px] uppercase tracking-[0.08em] text-[#6F6A5F]"
 
 export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) {
   const [storms, setStorms] = useState<StormEvent[]>(initialStorms)
@@ -87,21 +89,19 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
   }, [storms, zipInsights])
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard label="Active Alerts" value={stats.total} />
-        <StatCard label="Severe & Above" value={stats.severe} tone="orange" />
-        <StatCard
-          label="Threatened ZIPs"
-          value={stats.distinctZips}
-          tone="lime"
-          sub={stats.enriched > 0 ? `${stats.enriched} nowcast-enriched` : undefined}
-        />
-        <Card className={`${CARD} justify-between gap-2 py-4`}>
-          <div className="px-4 text-[11px] uppercase tracking-[0.08em] text-[#6F6A5F]">
-            Feed
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* Hero map panel */}
+      <Card className={`${CARD} gap-0 overflow-hidden p-0 lg:col-span-2`}>
+        <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5">
+          <div>
+            <h1 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[#201E1A]">
+              Live storms.
+            </h1>
+            <p className="mt-1 text-sm leading-6 text-[#6F6A5F]">
+              NWS severe-weather alerts over live radar, resolved to the ZIP code.
+            </p>
           </div>
-          <div className="flex items-center gap-2 px-4">
+          <div className="flex items-center gap-2.5 rounded-xl bg-[#E7E3DA] px-3 py-2">
             <span className="relative flex size-2.5">
               {live && (
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#7BA05B] opacity-75" />
@@ -112,55 +112,91 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
                 }`}
               />
             </span>
-            <span className="text-sm font-semibold text-[#201E1A]">
-              {live ? "Live" : "Offline"}
+            <div>
+              <div className="text-sm font-semibold leading-tight text-[#201E1A]">
+                {live ? "Feed live" : "Feed offline"}
+              </div>
+              <div className="text-[10px] uppercase tracking-[0.08em] text-[#6F6A5F]">
+                streaming NWS alerts
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-4 px-5 py-2.5">
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-[#6F6A5F]">
+            Radar
+            <Switch checked={showRadar} onCheckedChange={(c) => setShowRadar(c)} />
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
+            onClick={refresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={refreshing ? "animate-spin" : undefined} />
+            Refresh
+          </Button>
+        </div>
+
+        <div className="h-[520px] lg:h-[600px]">
+          <StormMap
+            storms={storms}
+            zipInsights={zipInsights}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            showRadar={showRadar}
+          />
+        </div>
+
+        <div className="m-3 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 rounded-xl bg-[#E7E3DA] px-5 py-3">
+          <div className="flex items-baseline gap-3">
+            <span className="font-mono text-4xl font-semibold tabular-nums text-[#201E1A]">
+              {stats.total}
             </span>
+            <span className={LABEL}>Active alerts</span>
           </div>
-          <div className="px-4 text-xs text-[#9B958A]">
-            Updated {lastRefresh ? lastRefresh.toLocaleTimeString() : "—"}
+          <div className="text-[11px] tabular-nums text-[#6F6A5F]">
+            Updated {lastRefresh ? lastRefresh.toLocaleTimeString() : "—"} ·{" "}
+            {stats.severe} severe
           </div>
-        </Card>
-      </div>
+        </div>
+      </Card>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className={`${CARD} gap-0 overflow-hidden p-0 lg:col-span-2`}>
-          <div className="flex items-center justify-between border-b border-[#DDD8CC] px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[#201E1A]">
-              <Radar className="size-4 text-[#6F6A5F]" />
-              Live Map
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-[#6F6A5F]">
-                Radar
-                <Switch
-                  checked={showRadar}
-                  onCheckedChange={(c) => setShowRadar(c)}
-                />
-              </label>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
-                onClick={refresh}
-                disabled={refreshing}
-              >
-                <RefreshCw className={refreshing ? "animate-spin" : undefined} />
-                Refresh
-              </Button>
-            </div>
-          </div>
-          <div className="h-[480px] lg:h-[560px]">
-            <StormMap
-              storms={storms}
-              zipInsights={zipInsights}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              showRadar={showRadar}
-            />
-          </div>
+      {/* Instrument rail */}
+      <div className="flex flex-col gap-4">
+        <Card className={`${CARD} gap-3 p-5`}>
+          <div className={LABEL}>Alert level</div>
+          <AlertGauge severe={stats.severe} total={stats.total} />
         </Card>
 
-        <Card className={`${CARD} flex h-[560px] flex-col gap-0 p-0`}>
+        <Card className={`${CARD} gap-3 p-5`}>
+          <div className={LABEL}>Severity mix</div>
+          <SeveritySpectrum storms={storms} />
+        </Card>
+
+        <Card className="gap-2 rounded-2xl border border-transparent bg-[#D9F25C] p-5 text-[#201E1A] shadow-sm">
+          <div className="text-[11px] uppercase tracking-[0.08em] text-[#201E1A]/70">
+            Threatened ZIPs
+          </div>
+          <div className="font-mono text-4xl font-semibold tabular-nums">
+            {stats.distinctZips}
+          </div>
+          <div className="text-[11px] text-[#201E1A]/60">
+            {stats.enriched > 0
+              ? `${stats.enriched} nowcast-enriched`
+              : "awaiting nowcast enrichment"}
+          </div>
+          <Link
+            href="/reports"
+            className="mt-2 inline-flex w-fit items-center rounded-full bg-[#201E1A] px-4 py-2 text-xs font-medium text-[#F7F5F0] transition hover:bg-[#201E1A]/90"
+          >
+            Open ZIP reports →
+          </Link>
+        </Card>
+
+        <Card className={`${CARD} flex h-[340px] flex-col gap-0 p-0`}>
           <Tabs defaultValue="storms" className="flex min-h-0 flex-1 flex-col gap-0">
             <div className="border-b border-[#DDD8CC] px-3 py-2.5">
               <TabsList variant="line" className="h-8">
@@ -199,47 +235,108 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
   )
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-  sub,
-}: {
-  label: string
-  value: number
-  tone?: "lime" | "orange"
-  sub?: string
-}) {
-  const surface =
-    tone === "lime"
-      ? "rounded-2xl border border-transparent bg-[#D9F25C] shadow-sm"
-      : tone === "orange"
-        ? "rounded-2xl border border-transparent bg-[#F2915C] shadow-sm"
-        : CARD
+// Ring gauge: severe-and-above alerts as a fraction of all active alerts.
+function AlertGauge({ severe, total }: { severe: number; total: number }) {
+  const r = 40
+  const circumference = 2 * Math.PI * r
+  const fraction = total > 0 ? Math.min(severe / total, 1) : 0
   return (
-    <Card className={`${surface} gap-2 py-4 text-[#201E1A]`}>
-      <div
-        className={`px-4 text-[11px] uppercase tracking-[0.08em] ${
-          tone ? "text-[#201E1A]/70" : "text-[#6F6A5F]"
-        }`}
-      >
-        {label}
-      </div>
-      <div className="flex items-baseline gap-2 px-4">
-        <span className="font-mono text-3xl font-semibold tabular-nums">
-          {value}
+    <div className="relative mx-auto size-36">
+      <svg viewBox="0 0 100 100" className="size-full -rotate-90">
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke="#E7E3DA"
+          strokeWidth="9"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke="#E8772E"
+          strokeWidth="9"
+          strokeLinecap="round"
+          strokeDasharray={`${fraction * circumference} ${circumference}`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-mono text-3xl font-semibold tabular-nums text-[#201E1A]">
+          {severe}
+        </span>
+        <span className="text-[9px] uppercase tracking-[0.08em] text-[#6F6A5F]">
+          Severe &amp; above
         </span>
       </div>
-      {sub && (
-        <div
-          className={`px-4 text-[11px] ${
-            tone ? "text-[#201E1A]/60" : "text-[#9B958A]"
-          }`}
-        >
-          {sub}
-        </div>
-      )}
-    </Card>
+    </div>
+  )
+}
+
+const SPECTRUM_ORDER = ["Extreme", "Severe", "Moderate", "Minor", "Unknown"] as const
+const SPECTRUM_SLOTS = 24
+
+// Spectrum of thin bars: slots are allocated to severity buckets proportionally
+// to their storm counts (largest remainder); bar height tracks bucket size.
+function SeveritySpectrum({ storms }: { storms: StormEvent[] }) {
+  const bars = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const k of SPECTRUM_ORDER) counts[k] = 0
+    for (const s of storms) {
+      const key = (SPECTRUM_ORDER as readonly string[]).includes(s.severity ?? "")
+        ? (s.severity as string)
+        : "Unknown"
+      counts[key] += 1
+    }
+    const total = storms.length
+    if (total === 0) return []
+
+    const alloc = SPECTRUM_ORDER.map((k) => {
+      const exact = (counts[k] / total) * SPECTRUM_SLOTS
+      return { k, n: Math.floor(exact), rem: exact - Math.floor(exact) }
+    })
+    let used = alloc.reduce((sum, a) => sum + a.n, 0)
+    const byRemainder = [...alloc].sort((a, b) => b.rem - a.rem)
+    for (let i = 0; used < SPECTRUM_SLOTS; i++, used++) {
+      byRemainder[i % byRemainder.length].n += 1
+    }
+
+    const maxCount = Math.max(...SPECTRUM_ORDER.map((k) => counts[k]), 1)
+    const out: { color: string; heightPct: number }[] = []
+    for (const { k, n } of alloc) {
+      const base = (counts[k] / maxCount) * 100
+      for (let j = 0; j < n; j++) {
+        // Slight deterministic ripple so a flat bucket still reads as a spectrum.
+        const ripple = [1, 0.84, 0.93][j % 3]
+        out.push({ color: severityHex(k), heightPct: Math.round(base * ripple) })
+      }
+    }
+    return out
+  }, [storms])
+
+  return (
+    <div className="flex h-16 items-end gap-[3px]">
+      {bars.length > 0
+        ? bars.map((b, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-t"
+              style={{
+                height: `${b.heightPct}%`,
+                minHeight: 4,
+                backgroundColor: b.color,
+              }}
+            />
+          ))
+        : Array.from({ length: SPECTRUM_SLOTS }).map((_, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-t bg-[#DDD8CC]"
+              style={{ height: 4 }}
+            />
+          ))}
+    </div>
   )
 }
 
