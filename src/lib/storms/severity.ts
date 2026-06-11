@@ -1,17 +1,17 @@
 export const SEVERITY_HEX: Record<string, string> = {
-  Extreme: "#dc2626",
-  Severe: "#f97316",
-  Moderate: "#eab308",
-  Minor: "#22c55e",
-  Unknown: "#94a3b8",
+  Extreme: "#D9482B",
+  Severe: "#E8772E",
+  Moderate: "#D9A82B",
+  Minor: "#7BA05B",
+  Unknown: "#9B958A",
 }
 
 export const SEVERITY_BADGE_CLASS: Record<string, string> = {
-  Extreme: "bg-red-100 text-red-900 ring-red-200",
-  Severe: "bg-orange-100 text-orange-900 ring-orange-200",
-  Moderate: "bg-yellow-100 text-yellow-900 ring-yellow-200",
-  Minor: "bg-green-100 text-green-900 ring-green-200",
-  Unknown: "bg-slate-100 text-slate-900 ring-slate-200",
+  Extreme: "bg-[#D9482B]/10 text-[#A8361F] ring-[#D9482B]/25",
+  Severe: "bg-[#E8772E]/10 text-[#B55A1D] ring-[#E8772E]/25",
+  Moderate: "bg-[#D9A82B]/10 text-[#9C7A1C] ring-[#D9A82B]/25",
+  Minor: "bg-[#7BA05B]/10 text-[#5C7A42] ring-[#7BA05B]/25",
+  Unknown: "bg-[#9B958A]/10 text-[#6F6A5F] ring-[#9B958A]/25",
 }
 
 export function severityHex(severity: string | null | undefined): string {

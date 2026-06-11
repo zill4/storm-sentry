@@ -44,7 +44,7 @@ export default async function ChatPage({
   })
 
   return (
-    <main className="min-h-screen bg-[#f7f8f6] text-zinc-950">
+    <main className="min-h-screen bg-[#EDEAE3] text-[#201E1A]">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
         <ChatThread
           business={business}

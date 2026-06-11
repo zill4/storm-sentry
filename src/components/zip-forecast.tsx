@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { NormalizedForecast } from "@/lib/tomorrow/types"
 
-const GLASS = "border-0 bg-white/[0.03] ring-1 ring-white/10 backdrop-blur"
+const CARD = "rounded-2xl border border-[#DDD8CC] bg-[#F7F5F0] shadow-sm"
 
 type ApiOk = {
   ok: true
@@ -70,29 +70,35 @@ export function ZipForecast() {
     <div className="flex flex-col gap-5">
       <form onSubmit={submit} className="flex items-center gap-2">
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9B958A]" />
           <input
             value={zip}
             onChange={(e) => setZip(e.target.value.replace(/[^0-9]/g, "").slice(0, 5))}
             inputMode="numeric"
             maxLength={5}
             placeholder="Enter a ZIP code…"
-            className="w-full rounded-md border border-white/10 bg-white/[0.03] py-2 pl-9 pr-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-sky-400/50"
+            className="w-full rounded-lg border border-[#DDD8CC] bg-[#F7F5F0] py-2 pl-9 pr-3 text-sm text-[#201E1A] outline-none placeholder:text-[#9B958A] focus:border-[#201E1A]/40"
           />
         </div>
-        <Button type="submit" disabled={loading || zip.length !== 5}>
+        <Button
+          type="submit"
+          className="rounded-full bg-[#201E1A] text-[#F7F5F0] hover:bg-[#201E1A]/90"
+          disabled={loading || zip.length !== 5}
+        >
           {loading ? "Loading…" : "Get forecast"}
         </Button>
       </form>
 
       {error && (
-        <Card className={`${GLASS} p-4 text-sm text-amber-200/90`}>{error}</Card>
+        <Card className="rounded-2xl border border-[#F2915C]/40 bg-[#F2915C]/15 p-4 text-sm text-[#201E1A] shadow-sm">
+          {error}
+        </Card>
       )}
 
       {data && <ForecastView data={data} />}
 
       {!data && !error && !loading && (
-        <Card className={`${GLASS} p-10 text-center text-sm text-zinc-500`}>
+        <Card className={`${CARD} p-10 text-center text-sm text-[#9B958A]`}>
           Enter a ZIP code to see its hourly and 5-day forecast.
         </Card>
       )}
@@ -107,28 +113,28 @@ function ForecastView({ data }: { data: ApiOk }) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-lg font-semibold text-zinc-100">
+          <div className="text-lg font-semibold text-[#201E1A]">
             {f.location.name ?? `ZIP ${data.zip}`}
           </div>
-          <div className="text-xs text-zinc-500">
+          <div className="text-xs text-[#9B958A]">
             Updated {new Date(f.fetchedAt).toLocaleString()}
             {data.cached ? " · cached" : ""}
           </div>
         </div>
         {data.stale && (
-          <Badge variant="outline" className="border-amber-400/30 bg-amber-400/10 text-amber-200">
+          <Badge variant="outline" className="border-[#F2915C]/40 bg-[#F2915C]/15 text-[#201E1A]">
             stale — retrying soon
           </Badge>
         )}
       </div>
 
       {now && (
-        <Card className={`${GLASS} flex items-center justify-between p-5`}>
+        <Card className="flex items-center justify-between rounded-2xl border border-transparent bg-[#D9F25C] p-5 text-[#201E1A] shadow-sm">
           <div>
-            <div className="text-4xl font-semibold tabular-nums text-zinc-50">
+            <div className="font-mono text-4xl font-semibold tabular-nums">
               {temp(now.temperature)}
             </div>
-            <div className="mt-0.5 text-sm text-zinc-400">{now.weatherLabel ?? "—"}</div>
+            <div className="mt-0.5 text-sm text-[#201E1A]/70">{now.weatherLabel ?? "—"}</div>
           </div>
           <div className="flex gap-6">
             <Metric icon={<Wind className="size-4" />} label="Gust" value={now.windGust != null ? `${Math.round(now.windGust)} mph` : "—"} />
@@ -137,8 +143,8 @@ function ForecastView({ data }: { data: ApiOk }) {
         </Card>
       )}
 
-      <Card className={`${GLASS} gap-0 p-0`}>
-        <div className="border-b border-white/10 px-4 py-2.5 text-sm font-semibold">
+      <Card className={`${CARD} gap-0 p-0`}>
+        <div className="border-b border-[#DDD8CC] px-4 py-2.5 text-sm font-semibold text-[#201E1A]">
           Next 24 hours
         </div>
         <div className="flex gap-1 overflow-x-auto p-3">
@@ -147,11 +153,11 @@ function ForecastView({ data }: { data: ApiOk }) {
               key={h.time}
               className="flex min-w-[58px] flex-col items-center gap-1.5 rounded-lg px-2 py-2 text-center"
             >
-              <span className="text-[11px] text-zinc-500">{hourLabel(h.time)}</span>
-              <span className="text-sm font-semibold tabular-nums text-zinc-100">
+              <span className="text-[11px] text-[#9B958A]">{hourLabel(h.time)}</span>
+              <span className="font-mono text-sm font-semibold tabular-nums text-[#201E1A]">
                 {temp(h.temperature)}
               </span>
-              <span className="text-[10px] tabular-nums text-sky-300/80">
+              <span className="text-[10px] tabular-nums text-[#6F6A5F]">
                 {h.precipProbability ? pct(h.precipProbability) : ""}
               </span>
             </div>
@@ -159,26 +165,26 @@ function ForecastView({ data }: { data: ApiOk }) {
         </div>
       </Card>
 
-      <Card className={`${GLASS} gap-0 p-0`}>
-        <div className="border-b border-white/10 px-4 py-2.5 text-sm font-semibold">
+      <Card className={`${CARD} gap-0 p-0`}>
+        <div className="border-b border-[#DDD8CC] px-4 py-2.5 text-sm font-semibold text-[#201E1A]">
           5-day outlook
         </div>
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-[#DDD8CC]">
           {f.daily.slice(0, 6).map((d) => (
             <div key={d.date} className="flex items-center gap-3 px-4 py-2.5 text-sm">
               <div className="w-24 shrink-0">
-                <span className="font-medium text-zinc-200">{dayLabel(d.date)}</span>{" "}
-                <span className="text-zinc-500">{dayDate(d.date)}</span>
+                <span className="font-medium text-[#201E1A]">{dayLabel(d.date)}</span>{" "}
+                <span className="text-[#9B958A]">{dayDate(d.date)}</span>
               </div>
-              <span className="min-w-0 flex-1 truncate text-xs text-zinc-400">
+              <span className="min-w-0 flex-1 truncate text-xs text-[#6F6A5F]">
                 {d.weatherLabel ?? "—"}
               </span>
-              <span className="w-12 shrink-0 text-right text-xs tabular-nums text-sky-300/80">
+              <span className="w-12 shrink-0 text-right text-xs tabular-nums text-[#6F6A5F]">
                 {d.precipProbability ? pct(d.precipProbability) : "—"}
               </span>
-              <span className="w-16 shrink-0 text-right tabular-nums">
-                <span className="text-zinc-100">{temp(d.tempMax)}</span>{" "}
-                <span className="text-zinc-500">{temp(d.tempMin)}</span>
+              <span className="w-16 shrink-0 text-right font-mono tabular-nums">
+                <span className="text-[#201E1A]">{temp(d.tempMax)}</span>{" "}
+                <span className="text-[#9B958A]">{temp(d.tempMin)}</span>
               </span>
             </div>
           ))}
@@ -199,11 +205,11 @@ function Metric({
 }) {
   return (
     <div className="text-right">
-      <div className="flex items-center justify-end gap-1.5 text-[11px] uppercase tracking-wide text-zinc-500">
-        <span className="text-sky-400">{icon}</span>
+      <div className="flex items-center justify-end gap-1.5 text-[11px] uppercase tracking-[0.08em] text-[#201E1A]/60">
+        <span>{icon}</span>
         {label}
       </div>
-      <div className="mt-0.5 text-sm font-semibold tabular-nums text-zinc-100">{value}</div>
+      <div className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-[#201E1A]">{value}</div>
     </div>
   )
 }

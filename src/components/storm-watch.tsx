@@ -19,7 +19,7 @@ type Props = {
   refreshIntervalMs?: number
 }
 
-const GLASS = "border-0 bg-white/[0.03] ring-1 ring-white/10 backdrop-blur"
+const CARD = "rounded-2xl border border-[#DDD8CC] bg-[#F7F5F0] shadow-sm"
 
 export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) {
   const [storms, setStorms] = useState<StormEvent[]>(initialStorms)
@@ -90,47 +90,47 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Active Alerts" value={stats.total} />
-        <StatCard label="Severe & Above" value={stats.severe} accent="#f97316" />
+        <StatCard label="Severe & Above" value={stats.severe} tone="orange" />
         <StatCard
           label="Threatened ZIPs"
           value={stats.distinctZips}
-          accent="#38bdf8"
+          tone="lime"
           sub={stats.enriched > 0 ? `${stats.enriched} nowcast-enriched` : undefined}
         />
-        <Card className={`${GLASS} justify-between gap-2 py-4`}>
-          <div className="px-4 text-xs font-medium uppercase tracking-wide text-zinc-400">
+        <Card className={`${CARD} justify-between gap-2 py-4`}>
+          <div className="px-4 text-[11px] uppercase tracking-[0.08em] text-[#6F6A5F]">
             Feed
           </div>
           <div className="flex items-center gap-2 px-4">
             <span className="relative flex size-2.5">
               {live && (
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#7BA05B] opacity-75" />
               )}
               <span
                 className={`relative inline-flex size-2.5 rounded-full ${
-                  live ? "bg-emerald-400" : "bg-zinc-500"
+                  live ? "bg-[#7BA05B]" : "bg-[#9B958A]"
                 }`}
               />
             </span>
-            <span className="text-sm font-semibold">
+            <span className="text-sm font-semibold text-[#201E1A]">
               {live ? "Live" : "Offline"}
             </span>
           </div>
-          <div className="px-4 text-xs text-zinc-500">
+          <div className="px-4 text-xs text-[#9B958A]">
             Updated {lastRefresh ? lastRefresh.toLocaleTimeString() : "—"}
           </div>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className={`${GLASS} gap-0 overflow-hidden p-0 lg:col-span-2`}>
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Radar className="size-4 text-sky-400" />
+        <Card className={`${CARD} gap-0 overflow-hidden p-0 lg:col-span-2`}>
+          <div className="flex items-center justify-between border-b border-[#DDD8CC] px-4 py-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#201E1A]">
+              <Radar className="size-4 text-[#6F6A5F]" />
               Live Map
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-300">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-[#6F6A5F]">
                 Radar
                 <Switch
                   checked={showRadar}
@@ -140,6 +140,7 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
               <Button
                 variant="outline"
                 size="sm"
+                className="rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
                 onClick={refresh}
                 disabled={refreshing}
               >
@@ -159,12 +160,22 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
           </div>
         </Card>
 
-        <Card className={`${GLASS} flex h-[560px] flex-col gap-0 p-0`}>
+        <Card className={`${CARD} flex h-[560px] flex-col gap-0 p-0`}>
           <Tabs defaultValue="storms" className="flex min-h-0 flex-1 flex-col gap-0">
-            <div className="border-b border-white/10 px-3 py-2.5">
+            <div className="border-b border-[#DDD8CC] px-3 py-2.5">
               <TabsList variant="line" className="h-8">
-                <TabsTrigger value="storms">Storms ({storms.length})</TabsTrigger>
-                <TabsTrigger value="zips">ZIPs ({stats.distinctZips})</TabsTrigger>
+                <TabsTrigger
+                  value="storms"
+                  className="text-[#6F6A5F] hover:text-[#201E1A] data-active:text-[#201E1A] after:bg-[#201E1A]"
+                >
+                  Storms ({storms.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="zips"
+                  className="text-[#6F6A5F] hover:text-[#201E1A] data-active:text-[#201E1A] after:bg-[#201E1A]"
+                >
+                  ZIPs ({stats.distinctZips})
+                </TabsTrigger>
               </TabsList>
             </div>
             <TabsContent value="storms" className="min-h-0 flex-1 overflow-hidden">
@@ -191,29 +202,43 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
 function StatCard({
   label,
   value,
-  accent,
+  tone,
   sub,
 }: {
   label: string
   value: number
-  accent?: string
+  tone?: "lime" | "orange"
   sub?: string
 }) {
+  const surface =
+    tone === "lime"
+      ? "rounded-2xl border border-transparent bg-[#D9F25C] shadow-sm"
+      : tone === "orange"
+        ? "rounded-2xl border border-transparent bg-[#F2915C] shadow-sm"
+        : CARD
   return (
-    <Card className={`${GLASS} gap-2 py-4`}>
-      <div className="px-4 text-xs font-medium uppercase tracking-wide text-zinc-400">
+    <Card className={`${surface} gap-2 py-4 text-[#201E1A]`}>
+      <div
+        className={`px-4 text-[11px] uppercase tracking-[0.08em] ${
+          tone ? "text-[#201E1A]/70" : "text-[#6F6A5F]"
+        }`}
+      >
         {label}
       </div>
       <div className="flex items-baseline gap-2 px-4">
-        <span className="text-3xl font-semibold tabular-nums">{value}</span>
-        {accent && (
-          <span
-            className="size-2 rounded-full"
-            style={{ backgroundColor: accent }}
-          />
-        )}
+        <span className="font-mono text-3xl font-semibold tabular-nums">
+          {value}
+        </span>
       </div>
-      {sub && <div className="px-4 text-[11px] text-zinc-500">{sub}</div>}
+      {sub && (
+        <div
+          className={`px-4 text-[11px] ${
+            tone ? "text-[#201E1A]/60" : "text-[#9B958A]"
+          }`}
+        >
+          {sub}
+        </div>
+      )}
     </Card>
   )
 }
@@ -249,7 +274,7 @@ function ActiveStormsList({
 
   if (sorted.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-zinc-500">
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-[#9B958A]">
         No active alerts right now. The feed refreshes automatically.
       </div>
     )
@@ -267,12 +292,12 @@ function ActiveStormsList({
             onClick={() => onSelect(selected ? null : s.id)}
             className={`w-full rounded-lg border p-3 text-left transition ${
               selected
-                ? "border-white/30 bg-white/10"
-                : "border-white/10 bg-white/[0.02] hover:bg-white/5"
+                ? "border-[#201E1A]/25 bg-[#E7E3DA]"
+                : "border-[#DDD8CC] bg-[#F7F5F0] hover:bg-[#E7E3DA]"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-sm font-medium text-zinc-100">
+              <span className="truncate text-sm font-medium text-[#201E1A]">
                 {s.eventType}
               </span>
               <Badge
@@ -284,12 +309,12 @@ function ActiveStormsList({
               </Badge>
             </div>
             {s.areaDesc && (
-              <div className="mt-1.5 flex items-start gap-1.5 text-xs text-zinc-400">
-                <MapPin className="mt-0.5 size-3 shrink-0 text-zinc-500" />
+              <div className="mt-1.5 flex items-start gap-1.5 text-xs text-[#6F6A5F]">
+                <MapPin className="mt-0.5 size-3 shrink-0 text-[#9B958A]" />
                 <span className="line-clamp-2">{s.areaDesc}</span>
               </div>
             )}
-            <div className="mt-1.5 text-[11px] tabular-nums text-zinc-500">
+            <div className="mt-1.5 text-[11px] tabular-nums text-[#9B958A]">
               {formatTime(s.startedAt)}
               {s.expiresAt ? ` → ${formatTime(s.expiresAt)}` : ""}
             </div>
@@ -313,7 +338,7 @@ function ZipInsightsList({ insights }: { insights: ZipInsightEvent[] }) {
 
   if (sorted.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-zinc-500">
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-[#9B958A]">
         No ZIP codes under active storms. Threatened ZIPs appear here as storms
         move in.
       </div>
@@ -329,10 +354,10 @@ function ZipInsightsList({ insights }: { insights: ZipInsightEvent[] }) {
         return (
           <div
             key={z.id}
-            className="rounded-lg border border-white/10 bg-white/[0.02] p-3"
+            className="rounded-lg border border-[#DDD8CC] bg-[#F7F5F0] p-3 hover:bg-[#E7E3DA]"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-sm font-semibold text-zinc-100">
+              <span className="font-mono text-sm font-semibold tabular-nums text-[#201E1A]">
                 {z.zip}
               </span>
               <Badge
@@ -343,22 +368,22 @@ function ZipInsightsList({ insights }: { insights: ZipInsightEvent[] }) {
                 {z.severity}
               </Badge>
             </div>
-            <div className="mt-1 truncate text-xs text-zinc-400">
+            <div className="mt-1 truncate text-xs text-[#6F6A5F]">
               {z.eventType}
-              <span className="text-zinc-600"> · {miles} mi from center</span>
+              <span className="text-[#9B958A]"> · {miles} mi from center</span>
             </div>
             {n ? (
-              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums text-sky-300/90">
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums text-[#6F6A5F]">
                 {n.windGust != null && <span>{Math.round(n.windGust)} mph gust</span>}
                 {n.precipIntensity != null && (
                   <span>{n.precipIntensity.toFixed(2)} in/hr</span>
                 )}
                 {n.weatherLabel && (
-                  <span className="text-zinc-400">{n.weatherLabel}</span>
+                  <span className="text-[#9B958A]">{n.weatherLabel}</span>
                 )}
               </div>
             ) : (
-              <div className="mt-1.5 text-[11px] text-zinc-600">
+              <div className="mt-1.5 text-[11px] text-[#9B958A]">
                 Queued · nowcast pending
               </div>
             )}

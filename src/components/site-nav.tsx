@@ -17,16 +17,16 @@ const links = [
 export function SiteNav() {
   const pathname = usePathname()
   return (
-    <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#070b16]/85 text-zinc-100 backdrop-blur">
+    <nav className="sticky top-0 z-50 border-b border-[#DDD8CC] bg-[#F7F5F0]/95 text-[#201E1A]">
       <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-4 py-2 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
-          <span className="flex size-7 items-center justify-center rounded-md bg-sky-500 text-white">
+          <span className="flex size-7 items-center justify-center rounded-md bg-[#201E1A] text-[#F7F5F0]">
             <Zap className="size-4" />
           </span>
           Storm Sentry
           <Badge
             variant="outline"
-            className="ml-1 border-white/15 bg-white/5 text-xs text-zinc-300"
+            className="ml-1 border-[#DDD8CC] bg-transparent text-xs font-normal text-[#9B958A]"
           >
             POC
           </Badge>
@@ -39,10 +39,10 @@ export function SiteNav() {
               <Link
                 key={l.href}
                 href={l.href}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition ${
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition ${
                   active
-                    ? "bg-sky-500/15 text-sky-300"
-                    : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
+                    ? "bg-[#201E1A] text-[#F7F5F0]"
+                    : "text-[#6F6A5F] hover:bg-[#E7E3DA] hover:text-[#201E1A]"
                 }`}
               >
                 <Icon className="size-3.5" />
@@ -54,7 +54,7 @@ export function SiteNav() {
         <div className="ml-auto flex items-center gap-2">
           <Link
             href="/api/health"
-            className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-200"
+            className="flex items-center gap-1 text-xs text-[#9B958A] hover:text-[#201E1A]"
           >
             <Activity className="size-3.5" />
             health

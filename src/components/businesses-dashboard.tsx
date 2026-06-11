@@ -33,9 +33,9 @@ type Props = {
 }
 
 const STATUS_CLASS: Record<BusinessWithStatus["status"], string> = {
-  alerted: "bg-red-100 text-red-900 ring-red-200",
-  watching: "bg-amber-100 text-amber-900 ring-amber-200",
-  idle: "bg-zinc-100 text-zinc-700 ring-zinc-200",
+  alerted: "bg-[#D9482B]/10 text-[#A8361F] ring-[#D9482B]/25",
+  watching: "bg-[#D9A82B]/10 text-[#9C7A1C] ring-[#D9A82B]/25",
+  idle: "bg-[#E7E3DA] text-[#6F6A5F] ring-[#DDD8CC]",
 }
 
 const STATUS_LABEL: Record<BusinessWithStatus["status"], string> = {
@@ -131,14 +131,14 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
   return (
     <div className="flex flex-col gap-4">
       <DemoControls onChange={refresh} />
-      <Card className="rounded-lg border-zinc-200 bg-white">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-100">
+      <Card className="rounded-2xl border-[#DDD8CC] bg-[#F7F5F0] shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-[#DDD8CC]">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Bell className="size-4 text-emerald-600" />
+              <Bell className="size-4 text-[#6F6A5F]" />
               Contact list
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-[#6F6A5F]">
               {counts.all} contacts · {counts.alerted} notified · refreshed{" "}
               {lastRefresh.toLocaleTimeString()}
             </CardDescription>
@@ -165,7 +165,11 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
             />
             <Badge
               variant="outline"
-              className={live ? "bg-emerald-50 text-emerald-900" : "bg-zinc-50 text-zinc-600"}
+              className={
+                live
+                  ? "border-[#7BA05B]/25 bg-[#7BA05B]/10 text-[#5C7A42]"
+                  : "border-[#DDD8CC] bg-[#E7E3DA] text-[#6F6A5F]"
+              }
             >
               {live ? <Wifi className="mr-1 size-3" /> : <WifiOff className="mr-1 size-3" />}
               {live ? "live" : "offline"}
@@ -173,6 +177,7 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
             <Button
               variant="outline"
               size="sm"
+              className="rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
               onClick={refresh}
               disabled={refreshing}
             >
@@ -197,7 +202,7 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
             <TableBody>
               {sorted.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-sm text-zinc-500">
+                  <TableCell colSpan={7} className="py-10 text-center text-sm text-[#9B958A]">
                     No contacts match the current filter.
                   </TableCell>
                 </TableRow>
@@ -210,9 +215,9 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">{b.name}</TableCell>
-                  <TableCell className="text-sm text-zinc-700">
+                  <TableCell className="text-sm text-[#6F6A5F]">
                     <div className="flex items-center gap-1.5">
-                      <MapPin className="size-3.5 text-zinc-400" />
+                      <MapPin className="size-3.5 text-[#9B958A]" />
                       {b.city}, {b.state}
                     </div>
                   </TableCell>
@@ -228,21 +233,26 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
                         <span className="text-sm">{b.nearestStorm.eventType}</span>
                       </div>
                     ) : (
-                      <span className="text-sm text-zinc-400">—</span>
+                      <span className="text-sm text-[#9B958A]">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="tabular-nums text-sm text-zinc-700">
+                  <TableCell className="tabular-nums text-sm text-[#6F6A5F]">
                     {b.nearestStorm
                       ? `${metersToMiles(b.nearestStorm.distanceMeters)} mi`
                       : "—"}
                   </TableCell>
-                  <TableCell className="text-sm tabular-nums text-zinc-600">
+                  <TableCell className="text-sm tabular-nums text-[#9B958A]">
                     {formatTime(b.lastAlertedAt)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant={b.status === "alerted" ? "default" : "outline"}
                       size="sm"
+                      className={
+                        b.status === "alerted"
+                          ? "rounded-full bg-[#201E1A] text-[#F7F5F0] hover:bg-[#201E1A]/90"
+                          : "rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
+                      }
                       render={<Link href={`/chat/${b.id}`} />}
                     >
                       <MessageSquare />
@@ -272,16 +282,16 @@ function FilterChip({
   onClick: () => void
   tone?: "red"
 }) {
-  const base = "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium ring-1 transition"
+  const base = "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition"
   const activeClass =
     tone === "red"
-      ? "bg-red-100 text-red-900 ring-red-200"
-      : "bg-emerald-100 text-emerald-900 ring-emerald-200"
-  const inactive = "bg-white text-zinc-700 ring-zinc-200 hover:bg-zinc-50"
+      ? "bg-[#D9482B]/10 text-[#A8361F] ring-[#D9482B]/25"
+      : "bg-[#201E1A] text-[#F7F5F0] ring-[#201E1A]"
+  const inactive = "bg-transparent text-[#6F6A5F] ring-[#DDD8CC] hover:bg-[#E7E3DA]"
   return (
     <button onClick={onClick} className={`${base} ${active ? activeClass : inactive}`}>
       {label}
-      <span className="text-zinc-500">{count}</span>
+      <span className="opacity-60">{count}</span>
     </button>
   )
 }

@@ -61,7 +61,7 @@ export function StormsTable({ storms, selectedId, onSelect }: Props) {
       <TableBody>
         {sorted.length === 0 && (
           <TableRow>
-            <TableCell colSpan={7} className="py-10 text-center text-sm text-zinc-500">
+            <TableCell colSpan={7} className="py-10 text-center text-sm text-[#9B958A]">
               No active alerts in the accepted-event filter right now. Poll runs every {process.env.NEXT_PUBLIC_POLL_INTERVAL_SECONDS ?? 60}s.
             </TableCell>
           </TableRow>
@@ -74,8 +74,8 @@ export function StormsTable({ storms, selectedId, onSelect }: Props) {
               data-selected={isSelected ? "true" : undefined}
               className={
                 isSelected
-                  ? "bg-amber-50/70 hover:bg-amber-50/80 cursor-pointer"
-                  : "cursor-pointer"
+                  ? "bg-[#E7E3DA]/70 hover:bg-[#E7E3DA] cursor-pointer"
+                  : "cursor-pointer hover:bg-[#E7E3DA]/40"
               }
               onClick={() => {
                 if (!onSelect) return
@@ -95,28 +95,28 @@ export function StormsTable({ storms, selectedId, onSelect }: Props) {
                   <span>{s.eventType}</span>
                 </div>
                 {s.headline && (
-                  <p className="mt-0.5 max-w-md truncate text-xs text-zinc-500">
+                  <p className="mt-0.5 max-w-md truncate text-xs text-[#9B958A]">
                     {s.headline}
                   </p>
                 )}
               </TableCell>
-              <TableCell className="max-w-xs whitespace-normal text-sm text-zinc-700">
+              <TableCell className="max-w-xs whitespace-normal text-sm text-[#6F6A5F]">
                 <div className="flex items-start gap-1.5">
-                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-zinc-400" />
+                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#9B958A]" />
                   <span className="line-clamp-2">{s.areaDesc ?? "—"}</span>
                 </div>
               </TableCell>
-              <TableCell className="text-sm tabular-nums text-zinc-600">
+              <TableCell className="text-sm tabular-nums text-[#6F6A5F]">
                 {formatTime(s.startedAt)}
               </TableCell>
-              <TableCell className="text-sm tabular-nums text-zinc-600">
+              <TableCell className="text-sm tabular-nums text-[#6F6A5F]">
                 {formatTime(s.expiresAt)}
               </TableCell>
               <TableCell>
                 {s.geometry ? (
-                  <Badge className="bg-emerald-100 text-emerald-900">yes</Badge>
+                  <Badge className="bg-[#7BA05B]/15 text-[#5C7A42]">yes</Badge>
                 ) : (
-                  <Badge variant="outline" className="text-zinc-500">
+                  <Badge variant="outline" className="border-[#DDD8CC] text-[#9B958A]">
                     none
                   </Badge>
                 )}

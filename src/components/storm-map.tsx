@@ -22,24 +22,24 @@ type Props = {
   showRadar?: boolean
 }
 
-// Dark basemap from CARTO's public raster tiles — no API key required.
-const DARK_STYLE: StyleSpecification = {
+// Light basemap from CARTO's public raster tiles — no API key required.
+const LIGHT_STYLE: StyleSpecification = {
   version: 8,
   sources: {
     carto: {
       type: "raster",
       tiles: [
-        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
       ],
       tileSize: 256,
       attribution: "© OpenStreetMap contributors © CARTO",
     },
   },
   layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#070b16" } },
+    { id: "bg", type: "background", paint: { "background-color": "#EDEAE3" } },
     { id: "carto", type: "raster", source: "carto" },
   ],
 }
@@ -161,7 +161,7 @@ export function StormMap({
         ref={mapRef}
         onLoad={handleLoad}
         initialViewState={{ longitude: -96, latitude: 38.5, zoom: 3.5 }}
-        mapStyle={DARK_STYLE}
+        mapStyle={LIGHT_STYLE}
         style={{ width: "100%", height: "100%" }}
         interactiveLayerIds={["storm-fill"]}
         onClick={(e) => {
@@ -185,7 +185,7 @@ export function StormMap({
             maxzoom={7}
             attribution="Radar © RainViewer"
           >
-            <Layer id="radar-layer" type="raster" paint={{ "raster-opacity": 0.7 }} />
+            <Layer id="radar-layer" type="raster" paint={{ "raster-opacity": 0.6 }} />
           </Source>
         )}
 
@@ -259,8 +259,8 @@ const LEGEND_SEVERITIES: Array<{ label: string; key: keyof typeof SEVERITY_HEX }
 
 function MapLegend() {
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-lg border border-white/10 bg-[#070b16]/80 px-3 py-2.5 text-[11px] text-zinc-300 backdrop-blur">
-      <div className="mb-1.5 font-medium uppercase tracking-wide text-zinc-400">
+    <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-lg border border-[#DDD8CC] bg-[#F7F5F0]/95 px-3 py-2.5 text-[11px] text-[#201E1A] shadow-sm">
+      <div className="mb-1.5 uppercase tracking-[0.08em] text-[#6F6A5F]">
         Severity
       </div>
       <div className="flex flex-col gap-1">
@@ -274,8 +274,8 @@ function MapLegend() {
           </div>
         ))}
       </div>
-      <div className="mt-2 flex items-center gap-2 border-t border-white/10 pt-2">
-        <span className="size-2.5 rounded-full bg-zinc-300 ring-1 ring-white" />
+      <div className="mt-2 flex items-center gap-2 border-t border-[#DDD8CC] pt-2">
+        <span className="size-2.5 rounded-full bg-[#9B958A] ring-1 ring-white" />
         ZIP · nowcast
       </div>
     </div>

@@ -117,16 +117,16 @@ export function DemoControls({ onChange }: Props) {
   }
 
   return (
-    <Card className="rounded-lg border-amber-200 bg-amber-50/40">
+    <Card className="rounded-2xl border-[#F2915C]/40 bg-[#F2915C]/15 shadow-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <FlaskConical className="size-4 text-amber-700" />
+        <CardTitle className="flex items-center gap-2 text-base text-[#201E1A]">
+          <FlaskConical className="size-4 text-[#B55A1D]" />
           Demo controls
-          <Badge variant="outline" className="bg-amber-100 text-amber-900">
+          <Badge variant="outline" className="border-[#F2915C]/40 bg-transparent text-[#B55A1D]">
             fixture
           </Badge>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-[#6F6A5F]">
           Inject simulated storm geometries to trigger the matcher on demand.
           Useful when real weather is calm. Cleared fixtures pop right back to
           idle.
@@ -139,16 +139,16 @@ export function DemoControls({ onChange }: Props) {
               key={p.id}
               onClick={() => inject(p)}
               disabled={busy !== null}
-              className="flex flex-col items-start gap-1 rounded-md border border-amber-200 bg-white p-3 text-left text-sm shadow-sm hover:border-amber-300 hover:bg-amber-50 disabled:opacity-50"
+              className="flex flex-col items-start gap-1 rounded-lg border border-[#DDD8CC] bg-[#F7F5F0] p-3 text-left text-sm shadow-sm hover:bg-[#E7E3DA] disabled:opacity-50"
             >
-              <div className="flex items-center gap-2 font-medium">
-                <CloudLightning className="size-3.5 text-amber-700" />
+              <div className="flex items-center gap-2 font-medium text-[#201E1A]">
+                <CloudLightning className="size-3.5 text-[#B55A1D]" />
                 {p.label}
                 {busy === p.id && (
-                  <Badge variant="outline" className="text-xs">running</Badge>
+                  <Badge variant="outline" className="border-[#DDD8CC] text-xs text-[#6F6A5F]">running</Badge>
                 )}
               </div>
-              <p className="text-xs text-zinc-600">{p.description}</p>
+              <p className="text-xs text-[#6F6A5F]">{p.description}</p>
             </button>
           ))}
         </div>
@@ -156,6 +156,7 @@ export function DemoControls({ onChange }: Props) {
           <Button
             variant="outline"
             size="sm"
+            className="rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
             onClick={clear}
             disabled={busy !== null}
           >
@@ -163,7 +164,7 @@ export function DemoControls({ onChange }: Props) {
             Clear fixtures
           </Button>
           {lastResult && (
-            <span className="text-xs text-zinc-700">{lastResult}</span>
+            <span className="text-xs text-[#6F6A5F]">{lastResult}</span>
           )}
         </div>
       </CardContent>

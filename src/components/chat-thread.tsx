@@ -88,32 +88,33 @@ export function ChatThread({ business, businessId, initialMessages }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="rounded-lg border-zinc-200 bg-white">
-        <CardHeader className="flex flex-row items-start justify-between border-b border-zinc-100">
+      <Card className="rounded-2xl border-[#DDD8CC] bg-[#F7F5F0] shadow-sm">
+        <CardHeader className="flex flex-row items-start justify-between border-b border-[#DDD8CC]">
           <div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon-sm" render={<Link href="/contacts" />}>
                 <ArrowLeft />
               </Button>
               <CardTitle className="text-base">{business.name}</CardTitle>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="border-[#DDD8CC] text-xs text-[#6F6A5F]">
                 {business.city}, {business.state}
               </Badge>
             </div>
-            <CardDescription className="mt-1">
+            <CardDescription className="mt-1 text-[#6F6A5F]">
               Operator-to-roofer chat surface · simulated. Storm Sentry posts an
               alert here the moment a match fires; this is the same payload the
               operator&apos;s real chat app would receive.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-zinc-50">
+            <Badge variant="outline" className="border-[#DDD8CC] bg-transparent text-[#6F6A5F]">
               <Bell className="mr-1 size-3" />
               {alertCount} alert{alertCount === 1 ? "" : "s"}
             </Badge>
             <Button
               variant="outline"
               size="sm"
+              className="rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
               onClick={refreshAlerts}
               disabled={status === "submitted" || status === "streaming"}
             >
@@ -125,11 +126,11 @@ export function ChatThread({ business, businessId, initialMessages }: Props) {
         <CardContent className="p-0">
           <div
             ref={scrollerRef}
-            className="flex h-[480px] flex-col gap-3 overflow-y-auto bg-zinc-50/40 p-4"
+            className="flex h-[480px] flex-col gap-3 overflow-y-auto bg-[#E7E3DA]/40 p-4"
           >
             {messages.length === 0 && (
-              <div className="m-auto text-center text-sm text-zinc-500">
-                <MessageSquare className="mx-auto mb-2 size-6 text-zinc-400" />
+              <div className="m-auto text-center text-sm text-[#9B958A]">
+                <MessageSquare className="mx-auto mb-2 size-6 text-[#9B958A]" />
                 No conversation yet.
                 <p className="mt-1">
                   Inject a fixture storm from the dashboard to trigger an alert
@@ -151,7 +152,7 @@ export function ChatThread({ business, businessId, initialMessages }: Props) {
               )
             })}
             {status === "streaming" && (
-              <div className="text-xs text-zinc-400">operator typing…</div>
+              <div className="text-xs text-[#9B958A]">operator typing…</div>
             )}
           </div>
         </CardContent>
@@ -159,17 +160,18 @@ export function ChatThread({ business, businessId, initialMessages }: Props) {
 
       <form
         onSubmit={onSubmit}
-        className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white p-2"
+        className="flex items-center gap-2 rounded-2xl border border-[#DDD8CC] bg-[#F7F5F0] p-2 shadow-sm"
       >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Reply as the roofer (try 'yes', 'price', 'when can you deploy')…"
-          className="flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-zinc-400"
+          className="flex-1 bg-transparent px-3 py-2 text-sm text-[#201E1A] outline-none placeholder:text-[#9B958A]"
           disabled={status === "submitted" || status === "streaming"}
         />
         <Button
           type="submit"
+          className="rounded-full bg-[#201E1A] text-[#F7F5F0] hover:bg-[#201E1A]/90"
           disabled={!input.trim() || status === "submitted" || status === "streaming"}
         >
           <Send />
@@ -192,10 +194,10 @@ function ChatBubble({
   const align = side === "left" ? "items-start" : "items-end"
   const bubble =
     variant === "alert"
-      ? "bg-amber-100 text-amber-950 ring-1 ring-amber-200"
+      ? "bg-[#F2915C]/15 text-[#201E1A] ring-1 ring-[#F2915C]/40"
       : variant === "user"
-      ? "bg-emerald-600 text-white"
-      : "bg-white ring-1 ring-zinc-200 text-zinc-900"
+      ? "bg-[#201E1A] text-[#F7F5F0]"
+      : "bg-[#F7F5F0] ring-1 ring-[#DDD8CC] text-[#201E1A]"
   const label =
     variant === "alert"
       ? "Storm Sentry → Operator chat"
@@ -204,7 +206,7 @@ function ChatBubble({
       : "Operator"
   return (
     <div className={`flex flex-col ${align} max-w-full`}>
-      <span className="mb-1 text-[11px] uppercase tracking-wide text-zinc-500">
+      <span className="mb-1 text-[11px] uppercase tracking-[0.08em] text-[#6F6A5F]">
         {label}
       </span>
       <div className={`max-w-[80%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm leading-6 ${bubble}`}>
