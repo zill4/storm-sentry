@@ -86,19 +86,55 @@ Required service **Variables** (the local `.env.local` is *not* deployed):
 
 See the in-app **Developer** page for payload examples.
 
-## Connecting GoHighLevel (planned v1)
+## GoHighLevel storm alerts (built in)
 
-No Zapier needed — two complementary paths:
+When a **new Severe/Extreme storm** threatens ZIPs, the notifier finds every GHL
+contact whose postal code matches and adds the **`storm-alert` tag**. Build one
+GHL Workflow — *trigger: Contact Tag Added = `storm-alert` → send SMS/email* —
+and messaging stays in GHL (content, compliance, opt-outs).
 
-1. **Push (works today):** create a GHL Workflow with an **Inbound Webhook** trigger, then register its URL via `POST /api/webhooks` with `events: ["zip_insight_added"]`. GHL receives `storm_sentry.zip_insight.v1` payloads (ZIP + storm + nowcast) and maps fields to actions.
-2. **Pull/match (next):** when a storm produces its threatened-ZIP set, call GHL `POST /contacts/search` filtered to those ZIPs (exact postal-code match — *we* own the geometry, GHL never needs radius search), then tag/enroll the matched contacts. Needs a **Private Integration token**:
+Setup:
+1. GHL → Settings → **Private Integrations** → create token with
+   `contacts.readonly` + `contacts.write` scopes.
+2. Set env: `GHL_PRIVATE_TOKEN`, `GHL_LOCATION_ID` (sub-account id). The
+   notifier self-enables when both are present; until then it logs
+   "would notify" lines.
+3. Create the tag-triggered workflow in GHL. **Two settings matter for repeat
+   storms:** enable **Allow Re-Entry** in the workflow settings, and add a final
+   action **Remove Contact Tag → `storm-alert`**. GHL's trigger fires on the
+   tag-*added* event, so a contact who keeps the tag would never re-trigger.
+   The notifier also force-retags (remove→add per storm,
+   `GHL_FORCE_RETAG=false` to disable) as a belt-and-suspenders, but re-entry
+   must be on or second messages are silently dropped.
+4. **Storm data in the message:** before tagging, the notifier writes the storm
+   onto the contact as custom-field values, so your SMS/email template uses
+   merge tags. Create these **custom fields** once (Settings → Custom Fields →
+   Contact, type *Single Line*) with these exact keys:
 
-```bash
-# GHL_PRIVATE_TOKEN="..."   # GHL Settings → Private Integrations (contacts scope)
-# GHL_LOCATION_ID="..."     # the sub-account to search/act in
-```
+   | Field key | Example value |
+   | --- | --- |
+   | `storm_event_type` | Tornado Warning |
+   | `storm_severity` | Extreme |
+   | `storm_zip` | 75201 (the contact's own ZIP) |
+   | `storm_headline` | Tornado Warning issued June 11… |
+   | `storm_expires` | Jun 11, 4:45 PM CDT (`GHL_TIME_ZONE`, default America/Chicago) |
 
-⚠️ Before connecting for real: a single big storm can create **hundreds** of ZIP insights in one poll cycle, and the dispatcher fires one webhook per insight. Subscribe GHL only to filtered, deduplicated triggers (or batch per storm) — otherwise one tornado outbreak = hundreds of workflow executions. GHL's API is also rate-limited; calls must go through a budget gate like Tomorrow.io's.
+   Example SMS: `⚠️ {{contact.storm_event_type}} ({{contact.storm_severity}})
+   is affecting your area {{contact.storm_zip}}. {{contact.storm_headline}}.
+   Expected until {{contact.storm_expires}}. Stay safe.`
+5. **Test safely before a real storm:** `POST /api/ghl-test` (demo-guarded)
+   with `{ "contactId": "..." }` or `{ "zip": "12345" }` runs the full
+   sequence — custom fields + retag — on one contact with clearly-marked TEST
+   data, so you can watch the workflow fire and check the merge tags render.
+
+Safety rails (defaults): only severity ≥ `GHL_MIN_SEVERITY` (Severe);
+**fixture storms never notify** unless `GHL_ALLOW_FIXTURES=true`; idempotent
+per contact×storm via the `ghl_notifications` table (redeploys can't
+re-message); ≤ `GHL_MAX_CONTACTS_PER_STORM` (500) per storm; per-ZIP contact
+lookups cached `GHL_CONTACT_CACHE_TTL_MIN` (360) and throttled
+(`GHL_MIN_CALL_GAP_MS`, 350). If your tenant's searchable postal field differs,
+set `GHL_ZIP_FIELD` (default `postalCode`). Live stats at `GET /api/health`
+under `ghl`.
 
 ## Demo endpoints in production
 

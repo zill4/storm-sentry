@@ -121,6 +121,24 @@ export const forecastCache = pgTable("forecast_cache", {
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
 })
 
+// One row per contact×storm GHL notification — the idempotency ledger that
+// guarantees a contact is never re-messaged for the same storm, even across
+// restarts/redeploys.
+export const ghlNotifications = pgTable(
+  "ghl_notifications",
+  {
+    id: text("id").primaryKey(), // `${contactId}:${stormId}`
+    contactId: text("contact_id").notNull(),
+    stormId: text("storm_id").notNull(),
+    zip: text("zip").notNull(),
+    tag: text("tag").notNull(),
+    status: text("status").notNull(), // tagged | failed
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ghl_notifications_storm_id_idx").on(t.stormId)],
+)
+
 // Shared Tomorrow.io budget counters (one row per UTC day). The single source of
 // truth so multiple replicas can't each spend a full budget. canSpend/record are
 // atomic UPDATEs against this row. (Per-second burst stays a per-instance check.)

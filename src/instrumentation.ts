@@ -19,4 +19,9 @@ export async function register() {
   console.log(
     `[storm-sentry] webhook dispatcher ${dispatcherResult.started ? "started" : `not started (${dispatcherResult.reason})`}`,
   )
+  const { startGhlNotifier } = await import("./lib/ghl/notifier")
+  const ghlResult = await startGhlNotifier()
+  console.log(
+    `[storm-sentry] ghl notifier ${ghlResult.started ? "started" : `not started (${ghlResult.reason})`}`,
+  )
 }
