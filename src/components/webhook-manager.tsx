@@ -59,6 +59,10 @@ function formatTime(iso: string | null): string {
   })
 }
 
+const CARD = "rounded-2xl border-[#D7E0EA] bg-white shadow-sm"
+const INPUT =
+  "rounded-lg border border-[#D7E0EA] bg-white px-3 py-2 text-sm text-[#0B2037] outline-none transition focus:border-[#1FA6E5] focus:ring-2 focus:ring-[#1FA6E5]/25"
+
 export function WebhookManager() {
   const [subs, setSubs] = useState<Subscription[]>([])
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
@@ -121,10 +125,10 @@ export function WebhookManager() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="rounded-lg border-zinc-200 bg-white">
+      <Card className={CARD}>
         <CardHeader>
           <CardTitle className="text-base">Subscribe a webhook</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-[#5A6B7E]">
             Storm Sentry POSTs <code>storm_sentry.match.v1</code> events to your
             URL the moment a match fires. Use the local sink at{" "}
             <code>/api/webhook-sink</code> if you just want to see what arrives.
@@ -133,21 +137,21 @@ export function WebhookManager() {
         <CardContent>
           <form onSubmit={createSub} className="flex flex-wrap items-end gap-2">
             <div className="flex flex-1 flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-600">URL</label>
+              <label className="text-xs font-medium text-[#5A6B7E]">URL</label>
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://your-chat-app.example.com/storm-sentry/inbound"
-                className="flex-1 rounded-md border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                className={`flex-1 ${INPUT}`}
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-600">Secret (optional)</label>
+              <label className="text-xs font-medium text-[#5A6B7E]">Secret (optional)</label>
               <input
                 value={secret}
                 onChange={(e) => setSecret(e.target.value)}
                 placeholder="bearer token"
-                className="rounded-md border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                className={INPUT}
               />
             </div>
             <Button type="submit" disabled={busy || !url}>
@@ -159,14 +163,14 @@ export function WebhookManager() {
               Refresh
             </Button>
           </form>
-          {msg && <p className="mt-2 text-xs text-zinc-700">{msg}</p>}
+          {msg && <p className="mt-2 text-xs text-[#5A6B7E]">{msg}</p>}
         </CardContent>
       </Card>
 
-      <Card className="rounded-lg border-zinc-200 bg-white">
+      <Card className={CARD}>
         <CardHeader>
           <CardTitle className="text-base">Active subscriptions ({subs.length})</CardTitle>
-          <CardDescription>Live counts from in-memory delivery log.</CardDescription>
+          <CardDescription className="text-[#5A6B7E]">Live counts from the delivery log.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -183,7 +187,7 @@ export function WebhookManager() {
             <TableBody>
               {subs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-6 text-center text-sm text-zinc-500">
+                  <TableCell colSpan={6} className="py-6 text-center text-sm text-[#8B98A8]">
                     No webhook subscriptions yet.
                   </TableCell>
                 </TableRow>
@@ -204,13 +208,13 @@ export function WebhookManager() {
                   <TableCell className="text-xs tabular-nums">
                     {s.successes}/{s.attempts} ok
                     {s.failures > 0 && (
-                      <span className="text-red-600"> · {s.failures} failed</span>
+                      <span className="text-[#D93A2B]"> · {s.failures} failed</span>
                     )}
                   </TableCell>
                   <TableCell className="text-xs tabular-nums">
                     {formatTime(s.lastDispatchAt)}
                     {s.lastStatus !== null && (
-                      <span className="ml-2 text-zinc-500">HTTP {s.lastStatus}</span>
+                      <span className="ml-2 text-[#8B98A8]">HTTP {s.lastStatus}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -230,10 +234,10 @@ export function WebhookManager() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-lg border-zinc-200 bg-white">
+      <Card className={CARD}>
         <CardHeader>
           <CardTitle className="text-base">Recent deliveries ({deliveries.length})</CardTitle>
-          <CardDescription>Last 20 webhook attempts across all subscriptions.</CardDescription>
+          <CardDescription className="text-[#5A6B7E]">Last 20 webhook attempts across all subscriptions.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -249,8 +253,8 @@ export function WebhookManager() {
             <TableBody>
               {deliveries.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-6 text-center text-sm text-zinc-500">
-                    No deliveries yet. Inject a fixture from the dashboard to fire one.
+                  <TableCell colSpan={5} className="py-6 text-center text-sm text-[#8B98A8]">
+                    No deliveries yet. They appear here as alerts fire.
                   </TableCell>
                 </TableRow>
               )}
@@ -261,9 +265,9 @@ export function WebhookManager() {
                   <TableCell className="max-w-xs truncate text-xs">{d.url}</TableCell>
                   <TableCell>
                     {d.ok ? (
-                      <Badge className="bg-emerald-100 text-emerald-900">{d.status}</Badge>
+                      <Badge className="bg-[#2FA37A]/12 text-[#247A5B]">{d.status}</Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-red-50 text-red-900">
+                      <Badge variant="outline" className="bg-[#D93A2B]/10 text-[#B22A1E]">
                         {d.status ?? "err"}
                       </Badge>
                     )}

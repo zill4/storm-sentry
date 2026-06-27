@@ -23,8 +23,8 @@ type Preset = {
 const PRESETS: Preset[] = [
   {
     id: "tx-dallas",
-    label: "Hit Dallas roofer",
-    description: "15mi Severe Thunderstorm centered on Lone Star Roofing.",
+    label: "Dallas · severe thunderstorm",
+    description: "15 mi severe thunderstorm over Lone Star Roofing.",
     body: {
       businessId: "biz-tx-01",
       radiusMiles: 15,
@@ -35,7 +35,7 @@ const PRESETS: Preset[] = [
   },
   {
     id: "se-tornado",
-    label: "Southeast tornado outbreak",
+    label: "Southeast · tornado outbreak",
     description: "150mi Tornado Warning over AL/MS/GA — 6+ matches.",
     body: {
       lat: 33.0,
@@ -48,7 +48,7 @@ const PRESETS: Preset[] = [
   },
   {
     id: "co-hail",
-    label: "Front Range hail belt",
+    label: "Colorado · Front Range hail",
     description: "75mi Severe Thunderstorm over CO Front Range — 4 matches.",
     body: {
       lat: 39.9,
@@ -61,7 +61,7 @@ const PRESETS: Preset[] = [
   },
   {
     id: "fl-hurricane",
-    label: "Florida hurricane",
+    label: "Florida · hurricane warning",
     description: "250mi Hurricane Warning across the FL peninsula.",
     body: {
       lat: 28.0,
@@ -109,7 +109,7 @@ export function DemoControls({ onChange }: Props) {
     try {
       const res = await fetch("/api/replay/clear", { method: "POST" })
       const data = await res.json()
-      setLastResult(`✓ Cleared ${data.removed ?? 0} fixture storms`)
+      setLastResult(`✓ Cleared ${data.removed ?? 0} test alerts`)
       onChange?.()
     } finally {
       setBusy(null)
@@ -121,15 +121,14 @@ export function DemoControls({ onChange }: Props) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base text-[#0B2037]">
           <FlaskConical className="size-4 text-[#B85614]" />
-          Demo controls
+          Alert simulator
           <Badge variant="outline" className="border-[#F47A20]/40 bg-transparent text-[#B85614]">
-            fixture
+            sandbox
           </Badge>
         </CardTitle>
         <CardDescription className="text-[#5A6B7E]">
-          Inject simulated storm geometries to trigger the matcher on demand.
-          Useful when real weather is calm. Cleared fixtures pop right back to
-          idle.
+          Send a sample severe-weather alert to validate matching and downstream
+          delivery — useful for onboarding and when live weather is calm.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -161,7 +160,7 @@ export function DemoControls({ onChange }: Props) {
             disabled={busy !== null}
           >
             <Trash2 />
-            Clear fixtures
+            Clear test alerts
           </Button>
           {lastResult && (
             <span className="text-xs text-[#5A6B7E]">{lastResult}</span>

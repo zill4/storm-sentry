@@ -1,5 +1,5 @@
 {
-  "name": "storm-sentry-poc-app",
+  "name": "storm-sentry-app",
   "version": "0.1.0",
   "private": true,
   "engines": {

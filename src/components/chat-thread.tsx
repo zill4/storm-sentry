@@ -101,9 +101,9 @@ export function ChatThread({ business, businessId, initialMessages }: Props) {
               </Badge>
             </div>
             <CardDescription className="mt-1 text-[#5A6B7E]">
-              Operator-to-roofer chat surface · simulated. Storm Sentry posts an
-              alert here the moment a match fires; this is the same payload the
-              operator&apos;s real chat app would receive.
+              Operator-to-roofer alert thread. Storm Sentry posts an alert here
+              the moment a match fires — the same payload your chat application
+              receives.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -133,8 +133,8 @@ export function ChatThread({ business, businessId, initialMessages }: Props) {
                 <MessageSquare className="mx-auto mb-2 size-6 text-[#8B98A8]" />
                 No conversation yet.
                 <p className="mt-1">
-                  Inject a fixture storm from the dashboard to trigger an alert
-                  message in this thread.
+                  Alerts appear here automatically when severe weather matches
+                  this contact.
                 </p>
               </div>
             )}

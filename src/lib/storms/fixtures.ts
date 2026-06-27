@@ -45,7 +45,7 @@ export function injectFixtureStorm(input: InjectInput): StormEvent {
     description: "Fixture storm injected via /api/replay for demo/testing.",
     instruction: null,
     areaDesc: input.areaDesc ?? `Fixture region around ${input.lat.toFixed(3)}, ${input.lng.toFixed(3)}`,
-    senderName: "Storm Sentry POC (fixture)",
+    senderName: "Storm Sentry (simulated)",
     startedAt: startedAt.toISOString(),
     expiresAt: expiresAt.toISOString(),
     endedAt: null,

@@ -213,15 +213,15 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
           <SeverityBar storms={storms} />
         </Card>
 
-        <Card className="gap-2.5 rounded-2xl border border-transparent bg-[#1FA6E5] p-5 text-[#0B2037] shadow-sm">
-          <div className="text-[11px] uppercase tracking-[0.08em] text-[#0B2037]/70">
+        <Card className="gap-2.5 rounded-2xl border border-[#103153] bg-[#0B2037] p-5 text-white shadow-sm">
+          <div className="text-[11px] uppercase tracking-[0.08em] text-[#1FA6E5]">
             Threatened ZIPs
           </div>
           <div className="flex items-baseline gap-3">
-            <span className="font-mono text-4xl font-semibold tabular-nums">
+            <span className="font-mono text-4xl font-semibold tabular-nums text-white">
               {stats.distinctZips}
             </span>
-            <span className="text-[11px] text-[#0B2037]/60">
+            <span className="text-[11px] text-[#91A8BF]">
               {stats.enriched > 0
                 ? `${stats.enriched} enriched`
                 : "awaiting enrichment"}
@@ -230,7 +230,7 @@ export function StormWatch({ initialStorms, refreshIntervalMs = 60000 }: Props) 
           <WorstZips insights={zipInsights} />
           <Link
             href="/reports"
-            className="mt-1 inline-flex w-fit items-center rounded-full bg-[#0B2037] px-4 py-2 text-xs font-medium text-[#FFFFFF] transition hover:bg-[#0B2037]/90"
+            className="mt-1 inline-flex w-fit items-center rounded-full bg-[#1FA6E5] px-4 py-2 text-xs font-semibold text-[#06121F] transition hover:bg-[#1FA6E5]/90"
           >
             Open ZIP reports →
           </Link>
@@ -440,7 +440,7 @@ function WorstZips({ insights }: { insights: ZipInsightEvent[] }) {
 
   if (worst.length === 0) {
     return (
-      <div className="text-[11px] text-[#0B2037]/60">
+      <div className="text-[11px] text-[#91A8BF]">
         Threatened ZIPs appear here as storms move in.
       </div>
     )
@@ -451,7 +451,7 @@ function WorstZips({ insights }: { insights: ZipInsightEvent[] }) {
       {worst.map((z) => (
         <div
           key={z.id}
-          className="flex items-center justify-between gap-3 rounded-lg bg-[#0B2037]/5 px-3 py-2 transition hover:bg-[#0B2037]/10"
+          className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2 transition hover:bg-white/10"
         >
           <span className="flex min-w-0 items-center gap-2">
             <span
@@ -462,7 +462,7 @@ function WorstZips({ insights }: { insights: ZipInsightEvent[] }) {
               {z.zip}
             </span>
           </span>
-          <span className="shrink-0 font-mono text-xs tabular-nums text-[#0B2037]/70">
+          <span className="shrink-0 font-mono text-xs tabular-nums text-[#91A8BF]">
             {z.nowcast?.windGust != null
               ? `${Math.round(z.nowcast.windGust)} mph`
               : `${(z.distanceMeters / 1609.344).toFixed(1)} mi`}

@@ -83,7 +83,7 @@ async function dispatchOne(
   const body = JSON.stringify(payload)
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "storm-sentry-poc-webhook/1",
+    "User-Agent": "storm-sentry-webhook/1",
     "X-Storm-Sentry-Event": eventType,
   }
   if (sub.secret) headers["Authorization"] = `Bearer ${sub.secret}`

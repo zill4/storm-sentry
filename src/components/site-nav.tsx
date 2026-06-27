@@ -48,9 +48,6 @@ export function SiteNav() {
       <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-4 py-2.5 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2">
           <StormSentryWordmark />
-          <span className="ml-0.5 hidden rounded-full border border-[#D7E0EA] bg-[#EEF3F9] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[#8B98A8] sm:inline">
-            POC
-          </span>
         </Link>
         <div className="ml-4 hidden items-center gap-1 md:flex">
           {links.map((l) => (

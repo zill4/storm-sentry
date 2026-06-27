@@ -36,7 +36,7 @@ const ENDPOINTS: Array<{
 const PAYLOAD_EXAMPLE = `{
   "event_type": "storm_sentry.match.v1",
   "fired_at": "2026-05-07T05:49:20.461Z",
-  "idempotency_key": "biz-tx-01:fixture:1778133551788:32.777,-96.797",
+  "idempotency_key": "biz-tx-01:urn:oid:2.49.0.1.840.0.a1b2c3",
   "business": {
     "id": "biz-tx-01",
     "name": "Lone Star Roofing",
@@ -49,18 +49,18 @@ const PAYLOAD_EXAMPLE = `{
     "timezone": "America/Chicago"
   },
   "storm": {
-    "id": "fixture:...",
-    "source": "fixture",
+    "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a1b2c3",
+    "source": "nws",
     "event_type": "Severe Thunderstorm Warning",
     "severity": "Severe",
-    "headline": "[FIXTURE] Severe Thunderstorm Warning 15mi radius",
-    "area_desc": "Fixture centered on Lone Star Roofing (Dallas, TX)",
+    "headline": "Severe Thunderstorm Warning issued May 7 by NWS Fort Worth",
+    "area_desc": "Dallas, Tarrant, and Denton Counties, TX",
     "started_at": "2026-05-07T05:49:20.461Z",
     "expires_at": "2026-05-07T07:49:20.461Z",
     "distance_miles": 0.01
   },
   "match": {
-    "id": "biz-tx-01:fixture:...",
+    "id": "biz-tx-01:urn:oid:2.49.0.1.840.0.a1b2c3",
     "created_at": "2026-05-07T05:49:20.461Z",
     "distance_meters": 14
   }
@@ -119,7 +119,7 @@ export default function DeveloperPage() {
           <Card className="rounded-2xl border-[#D7E0EA] bg-[#FFFFFF] shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">1. Detect</CardTitle>
-              <CardDescription className="text-[#5A6B7E]">NWS Alerts API every 60s + fixture injection for demos.</CardDescription>
+              <CardDescription className="text-[#5A6B7E]">NWS Alerts API, polled every 60s, with a simulation sandbox for testing.</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-[#5A6B7E]">
@@ -162,8 +162,7 @@ export default function DeveloperPage() {
           <CardHeader>
             <CardTitle className="text-base">Endpoints</CardTitle>
             <CardDescription className="text-[#5A6B7E]">
-              All under <code>http://localhost:8080</code> in this POC. Same
-              shape applies after deployment.
+              All paths are relative to your Storm Sentry API base URL.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -230,7 +229,7 @@ export default function DeveloperPage() {
           <CardContent className="text-sm leading-6 text-[#5A6B7E]">
             <ol className="ml-5 list-decimal space-y-1">
               <li>
-                Subscribe a webhook to <code>http://localhost:8080/api/webhook-sink</code> with a secret.
+                Subscribe a webhook to <code>/api/webhook-sink</code> with a secret.
               </li>
               <li>
                 Open{" "}
@@ -238,7 +237,7 @@ export default function DeveloperPage() {
                   Contacts
                   <ArrowRight className="ml-0.5 inline size-3" />
                 </Link>{" "}
-                and click any preset in the demo controls.
+                and send a test alert from the alert simulator.
               </li>
               <li>
                 Watch the deliveries table here populate within ~1s. Open the sink at{" "}
@@ -250,7 +249,7 @@ export default function DeveloperPage() {
                   Storm Map
                   <ArrowRight className="ml-0.5 inline size-3" />
                 </Link>{" "}
-                to confirm the fixture polygons appear on the map.
+                to confirm the simulated alert appears on the map.
               </li>
             </ol>
           </CardContent>

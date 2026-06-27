@@ -11,7 +11,7 @@ export function GET() {
   const poller = getPollerStatus()
   const storms = listActiveStorms()
   return NextResponse.json({
-    app: "storm-sentry-poc",
+    app: "storm-sentry",
     status: "ok",
     stack: {
       framework: "Next.js 16",

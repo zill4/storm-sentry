@@ -36,7 +36,7 @@ const SEV_FILTERS: { key: SevFilter; label: string; minRank: number }[] = [
 const SOURCE_LABEL: Record<StormEvent["source"], string> = {
   nws: "NWS",
   tomorrow: "Tomorrow.io",
-  fixture: "Fixture",
+  fixture: "Simulated",
 }
 
 function formatTime(iso: string | null | undefined): string {
