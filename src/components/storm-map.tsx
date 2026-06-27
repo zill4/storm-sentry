@@ -55,7 +55,7 @@ const LIGHT_STYLE: StyleSpecification = {
     },
   },
   layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#EDEAE3" } },
+    { id: "bg", type: "background", paint: { "background-color": "#EEF3F9" } },
     { id: "carto", type: "raster", source: "carto" },
   ],
 }
@@ -349,11 +349,11 @@ export function StormMap({
             maxWidth="260px"
             className="storm-popup"
           >
-            <div className="rounded-xl border border-[#DDD8CC] bg-[#F7F5F0] px-3 py-2 text-[#201E1A] shadow-md">
+            <div className="rounded-xl border border-[#D7E0EA] bg-[#FFFFFF] px-3 py-2 text-[#0B2037] shadow-md">
               {hover.kind === "storm" ? (
                 <>
                   <div className="text-sm font-semibold">{hover.eventType}</div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[#6F6A5F]">
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[#5A6B7E]">
                     <span
                       className="size-2 shrink-0 rounded-full"
                       style={{ backgroundColor: severityHex(hover.severity) }}
@@ -361,7 +361,7 @@ export function StormMap({
                     {hover.severity}
                   </div>
                   {hover.areaDesc && (
-                    <div className="mt-1 line-clamp-2 text-xs text-[#6F6A5F]">
+                    <div className="mt-1 line-clamp-2 text-xs text-[#5A6B7E]">
                       {hover.areaDesc}
                     </div>
                   )}
@@ -393,8 +393,8 @@ const LEGEND_SEVERITIES: Array<{ label: string; key: keyof typeof SEVERITY_HEX }
 
 function MapLegend() {
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-lg border border-[#DDD8CC] bg-[#F7F5F0]/95 px-3 py-2.5 text-[11px] text-[#201E1A] shadow-sm">
-      <div className="mb-1.5 uppercase tracking-[0.08em] text-[#6F6A5F]">
+    <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-lg border border-[#D7E0EA] bg-[#FFFFFF]/95 px-3 py-2.5 text-[11px] text-[#0B2037] shadow-sm">
+      <div className="mb-1.5 uppercase tracking-[0.08em] text-[#5A6B7E]">
         Severity
       </div>
       <div className="flex flex-col gap-1">
@@ -408,8 +408,8 @@ function MapLegend() {
           </div>
         ))}
       </div>
-      <div className="mt-2 flex items-center gap-2 border-t border-[#DDD8CC] pt-2">
-        <span className="size-2.5 rounded-full bg-[#9B958A] ring-1 ring-white" />
+      <div className="mt-2 flex items-center gap-2 border-t border-[#D7E0EA] pt-2">
+        <span className="size-2.5 rounded-full bg-[#8B98A8] ring-1 ring-white" />
         ZIP · nowcast
       </div>
     </div>

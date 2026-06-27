@@ -33,9 +33,9 @@ type Props = {
 }
 
 const STATUS_CLASS: Record<BusinessWithStatus["status"], string> = {
-  alerted: "bg-[#D9482B]/10 text-[#A8361F] ring-[#D9482B]/25",
-  watching: "bg-[#D9A82B]/10 text-[#9C7A1C] ring-[#D9A82B]/25",
-  idle: "bg-[#E7E3DA] text-[#6F6A5F] ring-[#DDD8CC]",
+  alerted: "bg-[#D93A2B]/10 text-[#B22A1E] ring-[#D93A2B]/25",
+  watching: "bg-[#E0A52A]/10 text-[#9C7320] ring-[#E0A52A]/25",
+  idle: "bg-[#E4EBF3] text-[#5A6B7E] ring-[#D7E0EA]",
 }
 
 const STATUS_LABEL: Record<BusinessWithStatus["status"], string> = {
@@ -131,14 +131,14 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
   return (
     <div className="flex flex-col gap-4">
       <DemoControls onChange={refresh} />
-      <Card className="rounded-2xl border-[#DDD8CC] bg-[#F7F5F0] shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-[#DDD8CC]">
+      <Card className="rounded-2xl border-[#D7E0EA] bg-[#FFFFFF] shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-[#D7E0EA]">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Bell className="size-4 text-[#6F6A5F]" />
+              <Bell className="size-4 text-[#5A6B7E]" />
               Contact list
             </CardTitle>
-            <CardDescription className="text-[#6F6A5F]">
+            <CardDescription className="text-[#5A6B7E]">
               {counts.all} contacts · {counts.alerted} notified · refreshed{" "}
               {lastRefresh.toLocaleTimeString()}
             </CardDescription>
@@ -167,8 +167,8 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
               variant="outline"
               className={
                 live
-                  ? "border-[#7BA05B]/25 bg-[#7BA05B]/10 text-[#5C7A42]"
-                  : "border-[#DDD8CC] bg-[#E7E3DA] text-[#6F6A5F]"
+                  ? "border-[#2FA37A]/25 bg-[#2FA37A]/10 text-[#247A5B]"
+                  : "border-[#D7E0EA] bg-[#E4EBF3] text-[#5A6B7E]"
               }
             >
               {live ? <Wifi className="mr-1 size-3" /> : <WifiOff className="mr-1 size-3" />}
@@ -177,7 +177,7 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
+              className="rounded-full border-[#D7E0EA] bg-transparent text-[#0B2037] hover:bg-[#E4EBF3]"
               onClick={refresh}
               disabled={refreshing}
             >
@@ -202,7 +202,7 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
             <TableBody>
               {sorted.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-sm text-[#9B958A]">
+                  <TableCell colSpan={7} className="py-10 text-center text-sm text-[#8B98A8]">
                     No contacts match the current filter.
                   </TableCell>
                 </TableRow>
@@ -215,9 +215,9 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">{b.name}</TableCell>
-                  <TableCell className="text-sm text-[#6F6A5F]">
+                  <TableCell className="text-sm text-[#5A6B7E]">
                     <div className="flex items-center gap-1.5">
-                      <MapPin className="size-3.5 text-[#9B958A]" />
+                      <MapPin className="size-3.5 text-[#8B98A8]" />
                       {b.city}, {b.state}
                     </div>
                   </TableCell>
@@ -233,15 +233,15 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
                         <span className="text-sm">{b.nearestStorm.eventType}</span>
                       </div>
                     ) : (
-                      <span className="text-sm text-[#9B958A]">—</span>
+                      <span className="text-sm text-[#8B98A8]">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="tabular-nums text-sm text-[#6F6A5F]">
+                  <TableCell className="tabular-nums text-sm text-[#5A6B7E]">
                     {b.nearestStorm
                       ? `${metersToMiles(b.nearestStorm.distanceMeters)} mi`
                       : "—"}
                   </TableCell>
-                  <TableCell className="text-sm tabular-nums text-[#9B958A]">
+                  <TableCell className="text-sm tabular-nums text-[#8B98A8]">
                     {formatTime(b.lastAlertedAt)}
                   </TableCell>
                   <TableCell className="text-right">
@@ -250,8 +250,8 @@ export function BusinessesDashboard({ initial, refreshIntervalMs = 60000 }: Prop
                       size="sm"
                       className={
                         b.status === "alerted"
-                          ? "rounded-full bg-[#201E1A] text-[#F7F5F0] hover:bg-[#201E1A]/90"
-                          : "rounded-full border-[#DDD8CC] bg-transparent text-[#201E1A] hover:bg-[#E7E3DA]"
+                          ? "rounded-full bg-[#0B2037] text-[#FFFFFF] hover:bg-[#0B2037]/90"
+                          : "rounded-full border-[#D7E0EA] bg-transparent text-[#0B2037] hover:bg-[#E4EBF3]"
                       }
                       render={<Link href={`/chat/${b.id}`} />}
                     >
@@ -285,9 +285,9 @@ function FilterChip({
   const base = "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition"
   const activeClass =
     tone === "red"
-      ? "bg-[#D9482B]/10 text-[#A8361F] ring-[#D9482B]/25"
-      : "bg-[#201E1A] text-[#F7F5F0] ring-[#201E1A]"
-  const inactive = "bg-transparent text-[#6F6A5F] ring-[#DDD8CC] hover:bg-[#E7E3DA]"
+      ? "bg-[#D93A2B]/10 text-[#B22A1E] ring-[#D93A2B]/25"
+      : "bg-[#0B2037] text-[#FFFFFF] ring-[#0B2037]"
+  const inactive = "bg-transparent text-[#5A6B7E] ring-[#D7E0EA] hover:bg-[#E4EBF3]"
   return (
     <button onClick={onClick} className={`${base} ${active ? activeClass : inactive}`}>
       {label}

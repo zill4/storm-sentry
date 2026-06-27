@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { SiteNav } from "@/components/site-nav";
 
@@ -13,16 +13,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Display serif for page titles + hero numerals (see DESIGN.md).
-const instrumentSerif = Instrument_Serif({
+// Display face for page titles + section headings. Inter, weighted bold to
+// echo the Storm Sentry wordmark (see DESIGN.md).
+const inter = Inter({
   variable: "--font-display",
-  weight: "400",
+  weight: ["400", "500", "600", "700", "800"],
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Storm Sentry POC",
-  description: "Proof-of-concept control surface for Storm Sentry.",
+  title: "Storm Sentry — Advanced Severe Weather Prediction",
+  description:
+    "Storm Sentry resolves live severe-weather alerts to the ZIP code and routes them to the field — advanced severe weather prediction.",
+  icons: {
+    icon: [{ url: "/brand/mark.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/brand/avatar.png" }],
+  },
 };
 
 export default function RootLayout({
@@ -33,9 +39,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#EDEAE3] text-[#201E1A]">
+      <body className="min-h-full flex flex-col bg-[#EEF3F9] text-[#0B2037]">
         <SiteNav />
         {children}
       </body>

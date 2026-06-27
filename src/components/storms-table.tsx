@@ -61,7 +61,7 @@ export function StormsTable({ storms, selectedId, onSelect }: Props) {
       <TableBody>
         {sorted.length === 0 && (
           <TableRow>
-            <TableCell colSpan={7} className="py-10 text-center text-sm text-[#9B958A]">
+            <TableCell colSpan={7} className="py-10 text-center text-sm text-[#8B98A8]">
               No active alerts in the accepted-event filter right now. Poll runs every {process.env.NEXT_PUBLIC_POLL_INTERVAL_SECONDS ?? 60}s.
             </TableCell>
           </TableRow>
@@ -74,8 +74,8 @@ export function StormsTable({ storms, selectedId, onSelect }: Props) {
               data-selected={isSelected ? "true" : undefined}
               className={
                 isSelected
-                  ? "bg-[#E7E3DA]/70 hover:bg-[#E7E3DA] cursor-pointer"
-                  : "cursor-pointer hover:bg-[#E7E3DA]/40"
+                  ? "bg-[#E4EBF3]/70 hover:bg-[#E4EBF3] cursor-pointer"
+                  : "cursor-pointer hover:bg-[#E4EBF3]/40"
               }
               onClick={() => {
                 if (!onSelect) return
@@ -95,28 +95,28 @@ export function StormsTable({ storms, selectedId, onSelect }: Props) {
                   <span>{s.eventType}</span>
                 </div>
                 {s.headline && (
-                  <p className="mt-0.5 max-w-md truncate text-xs text-[#9B958A]">
+                  <p className="mt-0.5 max-w-md truncate text-xs text-[#8B98A8]">
                     {s.headline}
                   </p>
                 )}
               </TableCell>
-              <TableCell className="max-w-xs whitespace-normal text-sm text-[#6F6A5F]">
+              <TableCell className="max-w-xs whitespace-normal text-sm text-[#5A6B7E]">
                 <div className="flex items-start gap-1.5">
-                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#9B958A]" />
+                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#8B98A8]" />
                   <span className="line-clamp-2">{s.areaDesc ?? "—"}</span>
                 </div>
               </TableCell>
-              <TableCell className="text-sm tabular-nums text-[#6F6A5F]">
+              <TableCell className="text-sm tabular-nums text-[#5A6B7E]">
                 {formatTime(s.startedAt)}
               </TableCell>
-              <TableCell className="text-sm tabular-nums text-[#6F6A5F]">
+              <TableCell className="text-sm tabular-nums text-[#5A6B7E]">
                 {formatTime(s.expiresAt)}
               </TableCell>
               <TableCell>
                 {s.geometry ? (
-                  <Badge className="bg-[#7BA05B]/15 text-[#5C7A42]">yes</Badge>
+                  <Badge className="bg-[#2FA37A]/15 text-[#247A5B]">yes</Badge>
                 ) : (
-                  <Badge variant="outline" className="border-[#DDD8CC] text-[#9B958A]">
+                  <Badge variant="outline" className="border-[#D7E0EA] text-[#8B98A8]">
                     none
                   </Badge>
                 )}

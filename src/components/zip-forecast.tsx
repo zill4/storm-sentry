@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { ForecastHour, NormalizedForecast } from "@/lib/tomorrow/types"
 
-const CARD = "rounded-2xl border border-[#DDD8CC] bg-[#F7F5F0] shadow-sm"
-const LABEL = "text-[11px] uppercase tracking-[0.08em] text-[#6F6A5F]"
+const CARD = "rounded-2xl border border-[#D7E0EA] bg-[#FFFFFF] shadow-sm"
+const LABEL = "text-[11px] uppercase tracking-[0.08em] text-[#5A6B7E]"
 
 type ApiOk = {
   ok: true
@@ -74,7 +74,7 @@ export function ZipForecast() {
           <div className={LABEL}>ZIP code</div>
           <form onSubmit={submit} className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9B958A]" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8B98A8]" />
               <input
                 value={zip}
                 onChange={(e) =>
@@ -84,12 +84,12 @@ export function ZipForecast() {
                 maxLength={5}
                 autoFocus
                 placeholder="Enter a ZIP code…"
-                className="w-full rounded-lg bg-[#E7E3DA] py-2.5 pl-9 pr-3 font-mono text-sm tabular-nums text-[#201E1A] outline-none placeholder:font-sans placeholder:text-[#9B958A] focus:ring-1 focus:ring-[#201E1A]/30"
+                className="w-full rounded-lg bg-[#E4EBF3] py-2.5 pl-9 pr-3 font-mono text-sm tabular-nums text-[#0B2037] outline-none placeholder:font-sans placeholder:text-[#8B98A8] focus:ring-1 focus:ring-[#0B2037]/30"
               />
             </div>
             <Button
               type="submit"
-              className="shrink-0 rounded-full bg-[#201E1A] text-[#F7F5F0] hover:bg-[#201E1A]/90"
+              className="shrink-0 rounded-full bg-[#0B2037] text-[#FFFFFF] hover:bg-[#0B2037]/90"
               disabled={loading || zip.length !== 5}
             >
               {loading ? "Loading…" : "Get forecast"}
@@ -98,7 +98,7 @@ export function ZipForecast() {
         </Card>
 
         {error && (
-          <Card className="rounded-2xl border border-[#F2915C]/40 bg-[#F2915C]/15 p-4 text-sm text-[#201E1A] shadow-sm">
+          <Card className="rounded-2xl border border-[#F47A20]/40 bg-[#F47A20]/15 p-4 text-sm text-[#0B2037] shadow-sm">
             {error}
           </Card>
         )}
@@ -111,7 +111,7 @@ export function ZipForecast() {
         ) : (
           !error &&
           !loading && (
-            <Card className={`${CARD} p-10 text-center text-sm text-[#9B958A]`}>
+            <Card className={`${CARD} p-10 text-center text-sm text-[#8B98A8]`}>
               Enter a ZIP code to see its hourly and 5-day forecast.
             </Card>
           )
@@ -123,17 +123,17 @@ export function ZipForecast() {
           <NowCard hour={data.forecast.hourly[0] ?? null} />
           <PeakCard hours={data.forecast.hourly.slice(0, 24)} />
           <Card className={`${CARD} gap-1.5 p-5`}>
-            <div className="text-sm font-semibold text-[#201E1A]">
+            <div className="text-sm font-semibold text-[#0B2037]">
               {data.forecast.location.name ?? `ZIP ${data.zip}`}
             </div>
-            <div className="text-xs tabular-nums text-[#9B958A]">
+            <div className="text-xs tabular-nums text-[#8B98A8]">
               Updated {new Date(data.forecast.fetchedAt).toLocaleString()}
               {data.cached ? " · cached" : ""}
             </div>
             {data.stale && (
               <Badge
                 variant="outline"
-                className="mt-1 w-fit border-[#F2915C]/40 bg-[#F2915C]/15 text-[#201E1A]"
+                className="mt-1 w-fit border-[#F47A20]/40 bg-[#F47A20]/15 text-[#0B2037]"
               >
                 stale — retrying soon
               </Badge>
@@ -149,19 +149,19 @@ export function ZipForecast() {
 function NowCard({ hour }: { hour: ForecastHour | null }) {
   if (!hour) return null
   return (
-    <Card className="gap-3 rounded-2xl border border-transparent bg-[#D9F25C] p-5 text-[#201E1A] shadow-sm">
-      <div className="text-[11px] uppercase tracking-[0.08em] text-[#201E1A]/70">
+    <Card className="gap-3 rounded-2xl border border-transparent bg-[#1FA6E5] p-5 text-[#0B2037] shadow-sm">
+      <div className="text-[11px] uppercase tracking-[0.08em] text-[#0B2037]/70">
         Now
       </div>
       <div>
         <div className="font-mono text-5xl font-semibold tabular-nums">
           {temp(hour.temperature)}
         </div>
-        <div className="mt-1 text-sm text-[#201E1A]/70">
+        <div className="mt-1 text-sm text-[#0B2037]/70">
           {hour.weatherLabel ?? "—"}
         </div>
       </div>
-      <div className="flex flex-col gap-2 border-t border-[#201E1A]/15 pt-3">
+      <div className="flex flex-col gap-2 border-t border-[#0B2037]/15 pt-3">
         <MetricRow
           icon={<Wind className="size-4" />}
           label="Gust"
@@ -192,8 +192,8 @@ function PeakCard({ hours }: { hours: ForecastHour[] }) {
     null
   )
   return (
-    <Card className="gap-3 rounded-2xl border border-transparent bg-[#F2915C] p-5 text-[#201E1A] shadow-sm">
-      <div className="text-[11px] uppercase tracking-[0.08em] text-[#201E1A]/70">
+    <Card className="gap-3 rounded-2xl border border-transparent bg-[#F47A20] p-5 text-[#0B2037] shadow-sm">
+      <div className="text-[11px] uppercase tracking-[0.08em] text-[#0B2037]/70">
         Next 24h peak
       </div>
       <div className="flex items-baseline justify-between gap-4">
@@ -201,7 +201,7 @@ function PeakCard({ hours }: { hours: ForecastHour[] }) {
           <div className="font-mono text-3xl font-semibold tabular-nums">
             {pct(maxPrecip)}
           </div>
-          <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-[#201E1A]/60">
+          <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-[#0B2037]/60">
             Max precip
           </div>
         </div>
@@ -209,7 +209,7 @@ function PeakCard({ hours }: { hours: ForecastHour[] }) {
           <div className="font-mono text-3xl font-semibold tabular-nums">
             {maxGust != null ? Math.round(maxGust) : "—"}
           </div>
-          <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-[#201E1A]/60">
+          <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-[#0B2037]/60">
             Max gust mph
           </div>
         </div>
@@ -229,11 +229,11 @@ function MetricRow({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.08em] text-[#201E1A]/60">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.08em] text-[#0B2037]/60">
         <span>{icon}</span>
         {label}
       </div>
-      <div className="font-mono text-sm font-semibold tabular-nums text-[#201E1A]">
+      <div className="font-mono text-sm font-semibold tabular-nums text-[#0B2037]">
         {value}
       </div>
     </div>
@@ -257,12 +257,12 @@ function HourlyChartCard({ hours }: { hours: ForecastHour[] }) {
 
   return (
     <Card className={`${CARD} gap-0 p-0`}>
-      <div className="flex items-center justify-between border-b border-[#DDD8CC] px-5 py-2.5">
-        <span className="text-sm font-semibold text-[#201E1A]">
+      <div className="flex items-center justify-between border-b border-[#D7E0EA] px-5 py-2.5">
+        <span className="text-sm font-semibold text-[#0B2037]">
           Next 24 hours
         </span>
-        <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-[#9B958A]">
-          <span className="inline-block h-2.5 w-1.5 rounded-[1px] bg-[#201E1A]" />
+        <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-[#8B98A8]">
+          <span className="inline-block h-2.5 w-1.5 rounded-[1px] bg-[#0B2037]" />
           now
         </span>
       </div>
@@ -275,7 +275,7 @@ function HourlyChartCard({ hours }: { hours: ForecastHour[] }) {
               h.precipProbability
             )} precip`}
             className={`flex-1 rounded-t-md transition-colors ${
-              i === 0 ? "bg-[#201E1A]" : "bg-[#DDD8CC] hover:bg-[#9B958A]"
+              i === 0 ? "bg-[#0B2037]" : "bg-[#D7E0EA] hover:bg-[#8B98A8]"
             }`}
             style={{ height: `${heightPct(h.temperature)}%` }}
           />
@@ -285,23 +285,23 @@ function HourlyChartCard({ hours }: { hours: ForecastHour[] }) {
         {hours.map((h, i) => (
           <div
             key={h.time}
-            className="min-w-0 flex-1 truncate text-center text-[9px] tabular-nums text-[#9B958A]"
+            className="min-w-0 flex-1 truncate text-center text-[9px] tabular-nums text-[#8B98A8]"
           >
             {i % 3 === 0 ? hourLabel(h.time) : ""}
           </div>
         ))}
       </div>
 
-      <div className="flex items-center justify-between border-t border-[#DDD8CC] px-5 py-2.5 text-[11px]">
-        <span className="text-[#6F6A5F]">
+      <div className="flex items-center justify-between border-t border-[#D7E0EA] px-5 py-2.5 text-[11px]">
+        <span className="text-[#5A6B7E]">
           Low{" "}
-          <span className="font-mono font-semibold tabular-nums text-[#201E1A]">
+          <span className="font-mono font-semibold tabular-nums text-[#0B2037]">
             {temps.length > 0 ? `${Math.round(min)}°` : "—"}
           </span>
         </span>
-        <span className="text-[#6F6A5F]">
+        <span className="text-[#5A6B7E]">
           High{" "}
-          <span className="font-mono font-semibold tabular-nums text-[#201E1A]">
+          <span className="font-mono font-semibold tabular-nums text-[#0B2037]">
             {temps.length > 0 ? `${Math.round(max)}°` : "—"}
           </span>
         </span>
@@ -322,10 +322,10 @@ function DailyOutlookCard({ forecast }: { forecast: NormalizedForecast }) {
 
   return (
     <Card className={`${CARD} gap-0 p-0`}>
-      <div className="border-b border-[#DDD8CC] px-5 py-2.5 text-sm font-semibold text-[#201E1A]">
+      <div className="border-b border-[#D7E0EA] px-5 py-2.5 text-sm font-semibold text-[#0B2037]">
         5-day outlook
       </div>
-      <div className="divide-y divide-[#DDD8CC]">
+      <div className="divide-y divide-[#D7E0EA]">
         {days.map((d) => {
           const hasRange =
             d.tempMin != null && d.tempMax != null && weekRange > 0
@@ -338,31 +338,31 @@ function DailyOutlookCard({ forecast }: { forecast: NormalizedForecast }) {
           return (
             <div
               key={d.date}
-              className="flex items-center gap-3 px-5 py-3 text-sm transition hover:bg-[#E7E3DA]/60"
+              className="flex items-center gap-3 px-5 py-3 text-sm transition hover:bg-[#E4EBF3]/60"
             >
               <div className="w-24 shrink-0">
-                <span className="font-medium text-[#201E1A]">
+                <span className="font-medium text-[#0B2037]">
                   {dayLabel(d.date)}
                 </span>{" "}
-                <span className="text-xs text-[#9B958A]">{dayDate(d.date)}</span>
+                <span className="text-xs text-[#8B98A8]">{dayDate(d.date)}</span>
               </div>
-              <span className="min-w-0 flex-1 truncate text-xs text-[#6F6A5F]">
+              <span className="min-w-0 flex-1 truncate text-xs text-[#5A6B7E]">
                 {d.weatherLabel ?? "—"}
               </span>
-              <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-[#6F6A5F]">
+              <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-[#5A6B7E]">
                 {d.precipProbability ? pct(d.precipProbability) : "—"}
               </span>
-              <div className="relative hidden h-1.5 w-24 shrink-0 rounded-full bg-[#E7E3DA] sm:block">
+              <div className="relative hidden h-1.5 w-24 shrink-0 rounded-full bg-[#E4EBF3] sm:block">
                 {hasRange && (
                   <div
-                    className="absolute inset-y-0 rounded-full bg-[#201E1A]"
+                    className="absolute inset-y-0 rounded-full bg-[#0B2037]"
                     style={{ left: `${left}%`, width: `${width}%` }}
                   />
                 )}
               </div>
               <span className="w-16 shrink-0 text-right font-mono tabular-nums">
-                <span className="text-[#201E1A]">{temp(d.tempMax)}</span>{" "}
-                <span className="text-[#9B958A]">{temp(d.tempMin)}</span>
+                <span className="text-[#0B2037]">{temp(d.tempMax)}</span>{" "}
+                <span className="text-[#8B98A8]">{temp(d.tempMin)}</span>
               </span>
             </div>
           )

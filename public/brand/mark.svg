@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="380"
+   height="380"
+   viewBox="0 0 380 380"
+   version="1.1"
+   id="svg11"
+   sodipodi:docname="storm_sentry_mark_editable.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview11"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
+  <title
+     id="title1">Storm Sentry AI — Logo Mark</title>
+  <defs
+     id="defs1">
+    <clipPath
+       id="innerShield">
+      <path
+         d="M150 42 L250 76 L240 180 C232 235 202 277 150 305 C98 277 68 235 60 180 L50 76 Z"
+         id="path1" />
+    </clipPath>
+  </defs>
+  <g
+     transform="translate(40 10)"
+     id="g11">
+    <path
+       d="M150 15 L280 60 L265 185 C255 255 215 310 150 342 C85 310 45 255 35 185 L20 60 Z"
+       fill="#0B2037"
+       id="path2" />
+    <g
+       clip-path="url(#innerShield)"
+       id="g10">
+      <rect
+         x="45"
+         y="38"
+         width="108"
+         height="280"
+         fill="#1FA6E5"
+         id="rect2" />
+      <rect
+         x="153"
+         y="38"
+         width="102"
+         height="280"
+         fill="#F47A20"
+         id="rect3" />
+      <!-- Three disciplined circuit branches -->
+      <g
+         fill="none"
+         stroke="#0B2037"
+         stroke-width="7"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="g5">
+        <path
+           d="M127 103 H96 V82 H78"
+           id="path3" />
+        <path
+           d="M119 154 H84 V184 H66"
+           id="path4" />
+        <path
+           d="M126 211 H96 V244 H78"
+           id="path5" />
+      </g>
+      <g
+         fill="#0B2037"
+         id="g7">
+        <circle
+           cx="73"
+           cy="82"
+           r="8"
+           id="circle5" />
+        <circle
+           cx="61"
+           cy="184"
+           r="8"
+           id="circle6" />
+        <circle
+           cx="73"
+           cy="244"
+           r="8"
+           id="circle7" />
+      </g>
+      <!-- Three severe-weather rain strokes -->
+      <g
+         fill="none"
+         stroke="#0B2037"
+         stroke-width="9"
+         stroke-linecap="round"
+         id="g9">
+        <path
+           d="M211 112 L197 148"
+           id="path7" />
+        <path
+           d="M242 138 L226 179"
+           id="path8" />
+        <path
+           d="M257 185 L241 226"
+           id="path9" />
+      </g>
+    </g>
+    <!-- Lightning is the memorable negative-space divider -->
+    <path
+       d="M177 56 L122 171 H158 L134 284 L221 144 H181 L205 56 Z"
+       fill="#FFFFFF"
+       id="path10" />
+  </g>
+</svg>
