@@ -22,6 +22,12 @@ export type ZipInsightEvent = {
   areaDesc: string | null
   /** ZIP centroid → storm centroid, meters. */
   distanceMeters: number
+  /** Estimated minutes until the storm cell reaches this ZIP (null when the
+   *  alert is already in effect overhead or motion is unknown). Refreshed
+   *  every poll cycle. */
+  etaMinutes: number | null
+  /** "track" = radar motion projection, "onset" = alert start time delta. */
+  etaSource: "track" | "onset" | null
   nowcast: NowcastValues | null
   status: ZipInsightStatus
   createdAt: string
@@ -41,5 +47,7 @@ export type ZipInsightSeed = {
   headline: string | null
   areaDesc: string | null
   distanceMeters: number
+  etaMinutes: number | null
+  etaSource: "track" | "onset" | null
   expiresAt: string | null
 }

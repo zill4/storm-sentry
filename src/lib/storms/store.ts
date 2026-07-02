@@ -47,10 +47,14 @@ function getStore(): StoreShape {
 }
 
 export function listActiveStorms(): StormEvent[] {
-  const now = new Date().toISOString()
+  // Epoch-based compare: NWS timestamps carry local offsets ("…-05:00"), so a
+  // lexicographic compare against a UTC "now" string silently drops fresh
+  // evening warnings once UTC rolls past midnight.
+  const now = Date.now()
   return [...getStore().storms.values()].filter((s) => {
     if (!s.expiresAt) return true
-    return s.expiresAt > now
+    const t = new Date(s.expiresAt).getTime()
+    return Number.isNaN(t) ? true : t > now
   })
 }
 
@@ -75,14 +79,18 @@ export function hydrateStorm(storm: StormEvent): void {
 
 export function removeExpiredStorms(): number {
   const store = getStore()
-  const now = new Date().toISOString()
+  const nowMs = Date.now()
+  const at = new Date().toISOString()
   let removed = 0
   for (const [id, s] of store.storms) {
-    if (s.expiresAt && s.expiresAt < now) {
+    if (!s.expiresAt) continue
+    const t = new Date(s.expiresAt).getTime()
+    // Epoch compare (see listActiveStorms); unparseable timestamps are kept.
+    if (!Number.isNaN(t) && t < nowMs) {
       store.storms.delete(id)
       deleteStormRow(id)
       removed++
-      emit({ type: "storm_removed", at: now, stormId: id })
+      emit({ type: "storm_removed", at, stormId: id })
     }
   }
   return removed

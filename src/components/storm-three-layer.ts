@@ -14,6 +14,8 @@ export type StormThreeLayer = CustomLayerInterface & {
   setSelectedId: (id: string | null) => void
 }
 
+const SIZE_SCRATCH = new THREE.Vector2()
+
 const RINGS_PER_MARKER = 3
 // Geographic footprint of a marker, in meters. Selected markers ping wider.
 const RING_RADIUS_METERS = 130_000
@@ -210,6 +212,14 @@ export function createStormThreeLayer(): StormThreeLayer {
         options.modelViewProjectionMatrix as unknown as number[],
       )
       renderer.resetState()
+      // Keep three's cached size in lockstep with the (resizable) map canvas —
+      // otherwise three re-applies a stale gl.viewport every frame after a
+      // container resize, clipping everything maplibre draws afterwards.
+      const canvas = renderer.domElement
+      const size = renderer.getSize(SIZE_SCRATCH)
+      if (size.x !== canvas.width || size.y !== canvas.height) {
+        renderer.setSize(canvas.width, canvas.height, false)
+      }
       renderer.render(scene, camera)
       map?.triggerRepaint()
     },

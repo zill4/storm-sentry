@@ -1,18 +1,19 @@
 "use client"
 
+import { useSyncExternalStore } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Activity, Bell, CloudRain, Code2, FileText, Map } from "lucide-react"
+import { Activity, CloudRain, FileText, Map } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import { StormSentryWordmark } from "@/components/brand/logo"
+import { SignOutButton } from "@/components/auth/sign-out-button"
+import { useSession } from "@/lib/auth/client"
 
 const links = [
   { href: "/", label: "Storm Map", icon: Map },
   { href: "/reports", label: "ZIP Reports", icon: FileText },
   { href: "/forecast", label: "Forecast", icon: CloudRain },
-  { href: "/contacts", label: "Contacts", icon: Bell },
-  { href: "/developer", label: "Developer", icon: Code2 },
 ]
 
 function NavLink({
@@ -41,6 +42,62 @@ function NavLink({
   )
 }
 
+const noopSubscribe = () => () => {}
+
+function AuthNav() {
+  const { data: session, isPending } = useSession()
+  // useSession can resolve before hydration finishes; render the placeholder
+  // for SSR + first client paint so the hydrated HTML always matches.
+  const hydrated = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  )
+
+  if (!hydrated || isPending) {
+    return <span className="inline-block h-8 w-16" aria-hidden />
+  }
+
+  if (session?.user) {
+    const u = session.user
+    const initial = (u.name?.trim()?.[0] ?? u.email[0] ?? "?").toUpperCase()
+    return (
+      <div className="flex items-center gap-1">
+        <Link
+          href="/account"
+          className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm text-[#0B2037] transition hover:bg-[#E4EBF3]"
+        >
+          <span className="flex size-7 items-center justify-center rounded-full bg-[#0B2037] text-xs font-bold text-white">
+            {initial}
+          </span>
+          <span className="hidden max-w-[140px] truncate sm:inline">
+            {u.name?.trim() ? u.name : u.email}
+          </span>
+        </Link>
+        <SignOutButton />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Link
+        href="/sign-in"
+        className="hidden rounded-full px-3 py-1.5 text-sm text-[#5A6B7E] transition hover:bg-[#E4EBF3] hover:text-[#0B2037] sm:inline-flex"
+      >
+        Sign in
+      </Link>
+      <Link
+        href="/sign-up"
+        className="rounded-full bg-[#0B2037] px-3.5 py-1.5 text-sm font-medium whitespace-nowrap text-white transition hover:bg-[#0B2037]/90"
+      >
+        <span className="sm:hidden">Sign up</span>
+        <span className="hidden sm:inline">Create account</span>
+      </Link>
+    </div>
+  )
+}
+
 export function SiteNav() {
   const pathname = usePathname()
   return (
@@ -57,11 +114,12 @@ export function SiteNav() {
         <div className="ml-auto flex items-center gap-2">
           <Link
             href="/api/health"
-            className="flex items-center gap-1 text-xs text-[#8B98A8] transition hover:text-[#1FA6E5]"
+            className="hidden items-center gap-1 text-xs text-[#8B98A8] transition hover:text-[#1FA6E5] sm:flex"
           >
             <Activity className="size-3.5" />
             health
           </Link>
+          <AuthNav />
         </div>
       </div>
       {/* Mobile: scrollable link row so the full nav stays reachable. */}

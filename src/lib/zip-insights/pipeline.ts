@@ -1,3 +1,4 @@
+import { estimateEta } from "@/lib/storms/eta"
 import { listActiveStorms } from "@/lib/storms/store"
 import { canSpend } from "@/lib/tomorrow/budget"
 import { enrichZip, getCachedNowcast } from "@/lib/tomorrow/nowcast"
@@ -33,7 +34,11 @@ export async function runZipInsights(): Promise<ZipInsightRunResult> {
 
   let created = 0
   let updated = 0
+  const now = new Date()
   for (const t of threatened) {
+    // Minutes-to-arrival from radar motion (or future onset); recomputed each
+    // cycle so it decays correctly as the cell closes in.
+    const eta = estimateEta(t.storm, t.lat, t.lng, now)
     const { created: wasCreated } = upsertZipInsight({
       zip: t.zip,
       lat: t.lat,
@@ -45,6 +50,8 @@ export async function runZipInsights(): Promise<ZipInsightRunResult> {
       headline: t.storm.headline,
       areaDesc: t.storm.areaDesc,
       distanceMeters: t.distanceMeters,
+      etaMinutes: eta?.minutes ?? null,
+      etaSource: eta?.source ?? null,
       expiresAt: t.storm.expiresAt,
     })
     if (wasCreated) created++

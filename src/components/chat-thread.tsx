@@ -92,7 +92,7 @@ export function ChatThread({ business, businessId, initialMessages }: Props) {
         <CardHeader className="flex flex-row items-start justify-between border-b border-[#D7E0EA]">
           <div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon-sm" render={<Link href="/contacts" />}>
+              <Button variant="ghost" size="icon-sm" render={<Link href="/" />}>
                 <ArrowLeft />
               </Button>
               <CardTitle className="text-base">{business.name}</CardTitle>

@@ -54,6 +54,8 @@ export function upsertZipInsight(seed: ZipInsightSeed): {
       headline: seed.headline,
       areaDesc: seed.areaDesc,
       distanceMeters: seed.distanceMeters,
+      etaMinutes: seed.etaMinutes,
+      etaSource: seed.etaSource,
       expiresAt: seed.expiresAt,
       updatedAt: now,
     }
@@ -75,6 +77,8 @@ export function upsertZipInsight(seed: ZipInsightSeed): {
     headline: seed.headline,
     areaDesc: seed.areaDesc,
     distanceMeters: seed.distanceMeters,
+    etaMinutes: seed.etaMinutes,
+    etaSource: seed.etaSource,
     nowcast: null,
     status: "queued",
     createdAt: now,

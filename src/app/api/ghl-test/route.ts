@@ -70,6 +70,7 @@ export async function POST(req: Request) {
       headline:
         "[TEST] Storm Sentry end-to-end test — no real storm. Safe to ignore.",
       expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      etaMinutes: 45,
     })
     await updateContactStormFields(contactId, fields)
     steps.customFields = `set: ${Object.keys(fields).join(", ")}`

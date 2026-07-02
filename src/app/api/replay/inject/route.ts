@@ -24,6 +24,14 @@ const BodySchema = z
     durationMinutes: z.number().min(1).max(720).optional(),
     headline: z.string().optional(),
     areaDesc: z.string().optional(),
+    // Simulated cell motion so test alerts produce arrival ETAs.
+    motion: z
+      .object({
+        headingDeg: z.number().min(0).max(360),
+        speedKt: z.number().min(1).max(120),
+        leadMiles: z.number().min(1).max(200).optional(),
+      })
+      .optional(),
   })
   .refine(
     (v) =>
@@ -76,6 +84,7 @@ export async function POST(req: Request) {
     durationMinutes: body.durationMinutes,
     headline: body.headline,
     areaDesc,
+    motion: body.motion,
   })
   const matcher = runMatcher()
 

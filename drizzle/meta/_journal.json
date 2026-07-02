@@ -29,6 +29,20 @@
       "when": 1781213569714,
       "tag": "0003_red_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782847325506,
+      "tag": "0004_past_red_skull",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782957722725,
+      "tag": "0005_petite_the_twelve",
+      "breakpoints": true
     }
   ]
 }

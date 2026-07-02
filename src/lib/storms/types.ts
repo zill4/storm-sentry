@@ -53,6 +53,14 @@ const NwsPropertiesSchema = z.object({
   headline: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   instruction: z.string().nullable().optional(),
+  // Radar-derived storm motion (TIME...MOT...LOC), present on warned storms —
+  // the source for minutes-to-arrival. zod strips keys we don't list.
+  parameters: z
+    .object({
+      eventMotionDescription: z.array(z.string()).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
 export const NwsFeatureSchema = z.object({
@@ -73,6 +81,18 @@ export type StormGeometry =
   | { type: "Polygon"; coordinates: number[][][] }
   | { type: "MultiPolygon"; coordinates: number[][][][] }
 
+/** Radar-derived cell motion from an NWS warning (eventMotionDescription). */
+export type StormMotion = {
+  /** When the cell positions were observed (ISO). */
+  refTime: string
+  /** Direction of TRAVEL in degrees true (already converted from the NWS
+   *  meteorological "moving from" convention). */
+  headingDeg: number
+  speedKt: number
+  /** One point per radar-identified cell (squall lines carry several). */
+  points: Array<{ lat: number; lng: number }>
+}
+
 export type StormEvent = {
   id: string
   source: "nws" | "fixture" | "tomorrow"
@@ -91,6 +111,7 @@ export type StormEvent = {
   endedAt: string | null
   nwsUrl: string | null
   geometry: StormGeometry | null
+  motion: StormMotion | null
   fetchedAt: string
 }
 

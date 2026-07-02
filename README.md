@@ -20,6 +20,7 @@ Tomorrow.io events (CONUS) ───┘   (~34k ZCTAs)    (Tomorrow.io)        �
   1. a 2nd severe-weather **events** source — one CONUS sweep (2 polygons) on a slow cadence, deduped against NWS;
   2. per-ZIP **nowcast** enrichment (precip rate, wind gust, temp) — the quantitative data NWS alerts don't carry.
 - **ZIP intersection** maps every active storm polygon onto bundled US Census ZCTA centroids (`src/lib/zips/`), producing one queued insight per threatened ZIP — this works off NWS alone.
+- **Arrival ETAs**: warned storms carry a radar motion vector (`eventMotionDescription` — cell positions, direction, speed). `src/lib/storms/eta.ts` projects each cell's track onto every threatened ZIP for a **minutes-to-arrival** estimate (`etaSource: "track"`), falling back to a future alert onset (`"onset"`). Exposed on insights, webhooks, GHL fields, and `/zip/{zip}`.
 - The map is a flat dark MapLibre basemap + a three.js "ping" layer + a free **RainViewer** radar layer. (Tomorrow.io map tiles are deliberately *not* used — each tile is a metered API call.)
 
 ### Tomorrow.io budget
@@ -67,6 +68,7 @@ Required service **Variables** (the local `.env.local` is *not* deployed):
 
 - `NWS_USER_AGENT` — required, or every poll fails.
 - `TOMORROW_IO_API_KEY` — required for Tomorrow.io enrichment (omit to run NWS-only).
+- `APP_BASE_URL` — the public origin (e.g. `https://stormsentry.app`); used for the `/zip/{zip}` links in webhook payloads and GHL fields.
 - Optional: the `TOMORROW_*` tuning vars above.
 
 > ⚠️ State is in-memory and **resets on every redeploy**. Keep **1 replica** until the Postgres datastore lands — otherwise the poller and the Tomorrow.io budget counter run per-replica and multiply API usage past the free-tier limit.
@@ -82,9 +84,37 @@ Required service **Variables** (the local `.env.local` is *not* deployed):
 | GET | `/api/events` | SSE stream (storm + `zip_insight_*` frames). |
 | POST | `/api/webhooks` | Subscribe. `events ∈ match_created \| zip_insight_added \| *`. |
 | POST | `/api/poll-now` | Force a poll + pipeline cycle (debug). |
-| POST | `/api/replay/inject` | Inject a fixture storm. |
+| POST | `/api/replay/inject` | Inject a fixture storm. Optional `motion: { headingDeg, speedKt, leadMiles? }` to simulate arrival ETAs. |
 
-See the in-app **Developer** page for payload examples.
+### Public ZIP storm report — `/zip/{zip}`
+
+Every ZIP has a public, no-auth storm page (e.g. `/zip/75201`): live alerts,
+arrival estimate, cached conditions, and a sign-up CTA. This is the link the
+automations embed in outbound email/SMS. Set **`APP_BASE_URL`** to the deployed
+origin so payload links point at production. Page views never spend Tomorrow.io
+budget (cached nowcast only).
+
+### `storm_sentry.zip_insight.v1` payload (Zapier/webhook contract)
+
+Fired per threatened ZIP on `zip_insight_added`. Key fields:
+
+```jsonc
+{
+  "zip": { "code": "75051", "lat": 32.72, "lng": -97.0, "url": "https://…/zip/75051" },
+  "storm": {
+    "event_type": "Severe Thunderstorm Warning",
+    "severity": "Severe",
+    "headline": "…", "area_desc": "…", "expires_at": "…",
+    "distance_miles": 11.87,
+    "eta_minutes": 30,          // null when the alert is already overhead
+    "eta_hours": 0.5,
+    "eta_text": "~30 minutes",  // merge-field friendly ("arriving now" / "~2 hours")
+    "eta_source": "track"       // "track" = radar motion, "onset" = alert start time
+  },
+  "nowcast": null,              // enriched shortly after; pull via GET /api/zip-insights
+  "status": "queued"
+}
+```
 
 ## GoHighLevel storm alerts (built in)
 
@@ -118,10 +148,12 @@ Setup:
    | `storm_zip` | 75201 (the contact's own ZIP) |
    | `storm_headline` | Tornado Warning issued June 11… |
    | `storm_expires` | Jun 11, 4:45 PM CDT (`GHL_TIME_ZONE`, default America/Chicago) |
+   | `storm_eta` | `~40 minutes` (empty string when the storm is already overhead — branch your copy on it) |
+   | `storm_link` | `https://…/zip/75201` (public no-auth storm report for the contact's ZIP) |
 
    Example SMS: `⚠️ {{contact.storm_event_type}} ({{contact.storm_severity}})
    is affecting your area {{contact.storm_zip}}. {{contact.storm_headline}}.
-   Expected until {{contact.storm_expires}}. Stay safe.`
+   Expected until {{contact.storm_expires}}. Live report: {{contact.storm_link}}`
 5. **Test safely before a real storm:** `POST /api/ghl-test` (demo-guarded)
    with `{ "contactId": "..." }` or `{ "zip": "12345" }` runs the full
    sequence — custom fields + retag — on one contact with clearly-marked TEST

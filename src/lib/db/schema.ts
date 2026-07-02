@@ -10,8 +10,12 @@ import {
 } from "drizzle-orm/pg-core"
 
 // Relative imports (not the @/ alias) so drizzle-kit's bundler resolves them.
-import type { StormGeometry } from "../storms/types"
+import type { StormGeometry, StormMotion } from "../storms/types"
 import type { NormalizedForecast, NowcastValues } from "../tomorrow/types"
+
+// Better Auth tables (user/session/account/verification) are defined separately
+// and re-exported here so drizzle-kit migrations and the Drizzle client see them.
+export * from "./auth-schema"
 
 // Active severe-weather alerts (NWS + Tomorrow.io + fixtures). Mirrors StormEvent.
 export const storms = pgTable(
@@ -34,6 +38,7 @@ export const storms = pgTable(
     endedAt: timestamp("ended_at", { withTimezone: true }),
     nwsUrl: text("nws_url"),
     geometry: jsonb("geometry").$type<StormGeometry | null>(),
+    motion: jsonb("motion").$type<StormMotion | null>(),
     fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -59,6 +64,8 @@ export const zipInsights = pgTable(
     headline: text("headline"),
     areaDesc: text("area_desc"),
     distanceMeters: integer("distance_meters").notNull(),
+    etaMinutes: integer("eta_minutes"),
+    etaSource: text("eta_source"), // "track" | "onset"
     nowcast: jsonb("nowcast").$type<NowcastValues | null>(),
     status: text("status").notNull().default("queued"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

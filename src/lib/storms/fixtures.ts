@@ -3,7 +3,7 @@ import type { Feature, Polygon } from "geojson"
 
 import { emit } from "@/lib/bus"
 import { upsertStorm } from "./store"
-import type { StormEvent, StormGeometry } from "./types"
+import type { StormEvent, StormGeometry, StormMotion } from "./types"
 
 export type InjectInput = {
   lat: number
@@ -14,6 +14,40 @@ export type InjectInput = {
   durationMinutes?: number
   areaDesc?: string
   headline?: string
+  /** Optional simulated cell motion so test alerts produce arrival ETAs. */
+  motion?: {
+    /** Direction of travel in degrees true (e.g. 106 = toward ESE). */
+    headingDeg: number
+    speedKt: number
+    /** How far behind the target the cell starts, in miles (default 25). */
+    leadMiles?: number
+  }
+}
+
+const M_PER_DEG_LAT = 110_540
+const M_PER_DEG_LNG_EQ = 111_320
+
+/** Place a simulated cell `leadMiles` up-track so it arrives at the center. */
+function buildFixtureMotion(
+  lat: number,
+  lng: number,
+  motion: NonNullable<InjectInput["motion"]>,
+  refTime: Date,
+): StormMotion {
+  const leadMeters = (motion.leadMiles ?? 25) * 1609.344
+  const headingRad = (motion.headingDeg * Math.PI) / 180
+  const mPerDegLng = M_PER_DEG_LNG_EQ * Math.cos(lat * (Math.PI / 180))
+  return {
+    refTime: refTime.toISOString(),
+    headingDeg: motion.headingDeg,
+    speedKt: motion.speedKt,
+    points: [
+      {
+        lat: lat - (Math.cos(headingRad) * leadMeters) / M_PER_DEG_LAT,
+        lng: lng - (Math.sin(headingRad) * leadMeters) / mPerDegLng,
+      },
+    ],
+  }
 }
 
 export function injectFixtureStorm(input: InjectInput): StormEvent {
@@ -51,6 +85,9 @@ export function injectFixtureStorm(input: InjectInput): StormEvent {
     endedAt: null,
     nwsUrl: null,
     geometry: poly.geometry as StormGeometry,
+    motion: input.motion
+      ? buildFixtureMotion(input.lat, input.lng, input.motion, startedAt)
+      : null,
     fetchedAt: startedAt.toISOString(),
   }
   upsertStorm(storm)

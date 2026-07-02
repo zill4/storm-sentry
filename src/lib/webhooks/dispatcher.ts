@@ -1,4 +1,6 @@
+import { zipReportUrl } from "@/lib/app-url"
 import { type BusEvent, subscribe } from "@/lib/bus"
+import { formatEta } from "@/lib/storms/eta"
 import { listWebhooks, recordDelivery, type WebhookSubscription } from "./store"
 
 declare global {
@@ -50,11 +52,20 @@ function buildZipInsightPayload(
 ) {
   const i = event.insight
   const distanceMiles = i.distanceMeters / 1609.344
+  const etaHours =
+    i.etaMinutes != null ? Number((i.etaMinutes / 60).toFixed(1)) : null
   return {
     event_type: "storm_sentry.zip_insight.v1",
     fired_at: event.at,
     idempotency_key: i.id,
-    zip: { code: i.zip, lat: i.lat, lng: i.lng },
+    zip: {
+      code: i.zip,
+      lat: i.lat,
+      lng: i.lng,
+      // Public no-auth storm report for this ZIP — safe to drop straight into
+      // an email/SMS template.
+      url: zipReportUrl(i.zip),
+    },
     storm: {
       id: i.stormId,
       source: i.source,
@@ -65,6 +76,13 @@ function buildZipInsightPayload(
       expires_at: i.expiresAt,
       distance_meters: i.distanceMeters,
       distance_miles: Number(distanceMiles.toFixed(2)),
+      // Estimated arrival at this ZIP. null when the alert is already in
+      // effect overhead (most warnings) or motion is unknown — template copy
+      // should branch on that.
+      eta_minutes: i.etaMinutes,
+      eta_hours: etaHours,
+      eta_text: formatEta(i.etaMinutes),
+      eta_source: i.etaSource,
     },
     // null at fire time; enriched values land shortly after and are available
     // from GET /api/zip-insights.

@@ -83,6 +83,7 @@ function normalizeEvent(ev: TomorrowEvent, fetchedAt: string): StormEvent | null
     endedAt: null,
     nwsUrl: ev.eventValues.link ?? null,
     geometry,
+    motion: null, // Tomorrow events don't carry radar motion
     fetchedAt,
   }
 }

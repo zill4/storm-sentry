@@ -42,6 +42,7 @@ export function persistStorm(s: StormEvent): void {
     endedAt: ts(s.endedAt),
     nwsUrl: s.nwsUrl,
     geometry: s.geometry,
+    motion: s.motion,
     fetchedAt: ts(s.fetchedAt) ?? new Date(),
     updatedAt: new Date(),
   }
@@ -71,6 +72,8 @@ export function persistZipInsight(e: ZipInsightEvent): void {
     headline: e.headline,
     areaDesc: e.areaDesc,
     distanceMeters: e.distanceMeters,
+    etaMinutes: e.etaMinutes,
+    etaSource: e.etaSource,
     nowcast: e.nowcast,
     status: e.status,
     createdAt: ts(e.createdAt) ?? new Date(),
@@ -164,6 +167,7 @@ export async function hydrateFromDb(): Promise<{
       endedAt: iso(r.endedAt),
       nwsUrl: r.nwsUrl,
       geometry: r.geometry as StormEvent["geometry"],
+      motion: r.motion as StormEvent["motion"],
       fetchedAt: iso(r.fetchedAt) ?? new Date().toISOString(),
     })
   }
@@ -183,6 +187,8 @@ export async function hydrateFromDb(): Promise<{
       headline: r.headline,
       areaDesc: r.areaDesc,
       distanceMeters: r.distanceMeters,
+      etaMinutes: r.etaMinutes,
+      etaSource: r.etaSource as ZipInsightEvent["etaSource"],
       nowcast: r.nowcast,
       status: r.status as ZipInsightEvent["status"],
       createdAt: iso(r.createdAt) ?? new Date().toISOString(),

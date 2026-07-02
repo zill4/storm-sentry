@@ -1,6 +1,8 @@
+import { zipReportUrl } from "@/lib/app-url"
 import { subscribe } from "@/lib/bus"
 import { getDb, isDbConfigured } from "@/lib/db/client"
 import { ghlNotifications } from "@/lib/db/schema"
+import { formatEta } from "@/lib/storms/eta"
 import { severityRank } from "@/lib/storms/types"
 import type { ZipInsightEvent } from "@/lib/zip-insights/types"
 import {
@@ -19,6 +21,7 @@ export type ZipStormContext = {
   severity: string
   headline: string | null
   expiresAt: string | null
+  etaMinutes: number | null
 }
 
 export function stormFieldValues(zip: string, ctx: ZipStormContext): Record<string, string> {
@@ -43,6 +46,11 @@ export function stormFieldValues(zip: string, ctx: ZipStormContext): Record<stri
     storm_zip: zip,
     storm_headline: (ctx.headline ?? ctx.eventType).slice(0, 200),
     storm_expires: expires,
+    // "~40 minutes" / "~2 hours" / "" when unknown — workflows should branch
+    // on the empty case ("tracking into your area right now").
+    storm_eta: formatEta(ctx.etaMinutes) ?? "",
+    // Public no-auth storm report the message can link to.
+    storm_link: zipReportUrl(zip),
   }
 }
 
@@ -236,6 +244,7 @@ function consider(insight: ZipInsightEvent): void {
     severity: insight.severity,
     headline: insight.headline,
     expiresAt: insight.expiresAt,
+    etaMinutes: insight.etaMinutes,
   }
   const debounceMs = Number(process.env.GHL_STORM_DEBOUNCE_MS ?? 5000)
   const existing = s.pending.get(insight.stormId)

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Layer, Map, NavigationControl, Popup, Source } from "react-map-gl/maplibre"
+import { Layer, Map, Marker, NavigationControl, Popup, Source } from "react-map-gl/maplibre"
 import type { MapRef } from "react-map-gl/maplibre"
 import type { StyleSpecification } from "maplibre-gl"
 import { centroid } from "@turf/turf"
@@ -25,6 +25,13 @@ type Props = {
   flyTo?: { id: string; seq: number } | null
   /** Storms filtered out elsewhere render dimmed instead of disappearing. */
   dimmedIds?: Set<string> | string[]
+  /** Override the CONUS default camera (e.g. focus one ZIP). */
+  initialView?: { longitude: number; latitude: number; zoom: number }
+  /** Highlighted point-of-interest pin (the report's ZIP centroid). */
+  focusPoint?: { lat: number; lng: number; label?: string } | null
+  showLegend?: boolean
+  /** Two-finger touch pan — prevents an embedded map from hijacking page scroll. */
+  cooperativeGestures?: boolean
 }
 
 type HoverInfo =
@@ -110,6 +117,10 @@ export function StormMap({
   showRadar = true,
   flyTo,
   dimmedIds,
+  initialView,
+  focusPoint,
+  showLegend = true,
+  cooperativeGestures = false,
 }: Props) {
   const radarTiles = useRadarTiles(showRadar)
   const mapRef = useRef<MapRef | null>(null)
@@ -133,6 +144,14 @@ export function StormMap({
     layer.setStorms(storms)
     layer.setSelectedId(selectedId ?? null)
   }
+
+  // Fallback for environments where ResizeObserver misbehaves (some WebViews):
+  // maplibre's own trackResize covers real browsers; resize() is idempotent.
+  useEffect(() => {
+    const onResize = () => mapRef.current?.getMap()?.resize()
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [])
 
   // Push live storm + selection changes into the three.js layer.
   useEffect(() => {
@@ -204,7 +223,8 @@ export function StormMap({
       <Map
         ref={mapRef}
         onLoad={handleLoad}
-        initialViewState={{ longitude: -96, latitude: 38.5, zoom: 3.5 }}
+        initialViewState={initialView ?? { longitude: -96, latitude: 38.5, zoom: 3.5 }}
+        cooperativeGestures={cooperativeGestures}
         mapStyle={LIGHT_STYLE}
         style={{ width: "100%", height: "100%" }}
         interactiveLayerIds={["storm-fill", "zip-dots"]}
@@ -339,6 +359,26 @@ export function StormMap({
           />
         </Source>
 
+        {focusPoint && (
+          <Marker
+            longitude={focusPoint.lng}
+            latitude={focusPoint.lat}
+            anchor="bottom"
+          >
+            <div className="pointer-events-none flex flex-col items-center">
+              {focusPoint.label && (
+                <span className="mb-1 rounded-md bg-[#0B2037] px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-wide text-white shadow-md">
+                  {focusPoint.label}
+                </span>
+              )}
+              <span className="relative flex size-3.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#1FA6E5] opacity-60" />
+                <span className="relative inline-flex size-3.5 rounded-full bg-[#1FA6E5] ring-2 ring-white shadow-md" />
+              </span>
+            </div>
+          </Marker>
+        )}
+
         {hover && !dragging && (
           <Popup
             longitude={hover.lng}
@@ -379,7 +419,7 @@ export function StormMap({
         )}
       </Map>
 
-      <MapLegend />
+      {showLegend && <MapLegend />}
     </div>
   )
 }
