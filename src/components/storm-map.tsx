@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { Pause, Play } from "lucide-react"
 import { Layer, Map, Marker, NavigationControl, Popup, Source } from "react-map-gl/maplibre"
 import type { MapRef } from "react-map-gl/maplibre"
 import type { StyleSpecification } from "maplibre-gl"
@@ -64,14 +65,23 @@ const LIGHT_STYLE: StyleSpecification = {
   layers: [
     { id: "bg", type: "background", paint: { "background-color": "#EEF3F9" } },
     { id: "carto", type: "raster", source: "carto" },
+    // Invisible anchor: radar frames insert before this so they always sit
+    // above the basemap but below every react-added storm layer, regardless
+    // of when the async frame fetch resolves.
+    { id: "radar-anchor", type: "background", paint: { "background-opacity": 0 } },
   ],
 }
 
-// Latest live precipitation-radar frame from RainViewer's free public API.
-// (Tomorrow.io map tiles are intentionally NOT used here: each tile is a
-// metered API call and would exhaust the free daily budget in one map view.)
-function useRadarTiles(enabled: boolean): string[] | null {
-  const [tiles, setTiles] = useState<string[] | null>(null)
+// Recent observed precipitation-radar frames from RainViewer's free public API
+// — the last ~hour of real scans, animated as a loop so storm motion is
+// visible. (Tomorrow.io map tiles are intentionally NOT used here: each tile is
+// a metered API call and would exhaust the free daily budget in one map view.)
+type RadarFrame = { time: number; tiles: string[] }
+
+const RADAR_FRAME_COUNT = 7 // ~last 60 min at RainViewer's ~10-min cadence
+
+function useRadarFrames(enabled: boolean): RadarFrame[] {
+  const [frames, setFrames] = useState<RadarFrame[]>([])
 
   useEffect(() => {
     if (!enabled) return
@@ -88,11 +98,15 @@ function useRadarTiles(enabled: boolean): string[] | null {
           host: string
           radar?: { past?: { time: number; path: string }[] }
         }
-        const frames = data.radar?.past ?? []
-        const latest = frames[frames.length - 1]
-        if (!latest || cancelled) return
-        // size / z / x / y / color(2 = universal blue) / smooth_snow
-        setTiles([`${data.host}${latest.path}/256/{z}/{x}/{y}/2/1_1.png`])
+        const past = (data.radar?.past ?? []).slice(-RADAR_FRAME_COUNT)
+        if (past.length === 0 || cancelled) return
+        setFrames(
+          past.map((f) => ({
+            time: f.time,
+            // size / z / x / y / color(2 = universal blue) / smooth_snow
+            tiles: [`${data.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`],
+          })),
+        )
       } catch {
         /* radar is best-effort; ignore network errors */
       }
@@ -106,7 +120,7 @@ function useRadarTiles(enabled: boolean): string[] | null {
     }
   }, [enabled])
 
-  return tiles
+  return frames
 }
 
 export function StormMap({
@@ -122,12 +136,32 @@ export function StormMap({
   showLegend = true,
   cooperativeGestures = false,
 }: Props) {
-  const radarTiles = useRadarTiles(showRadar)
+  const radarFrames = useRadarFrames(showRadar)
   const mapRef = useRef<MapRef | null>(null)
   const layerRef = useRef<StormThreeLayer | null>(null)
   const [hover, setHover] = useState<HoverInfo | null>(null)
   const [dragging, setDragging] = useState(false)
   const lastFlySeq = useRef(0)
+
+  // Radar loop: step through the observed frames, dwelling on the newest one.
+  const [radarPlaying, setRadarPlaying] = useState(true)
+  const [frameIdx, setFrameIdx] = useState(0)
+
+  // When a fresh frame list lands (initial fetch or 5-min refresh), snap to the
+  // newest frame so a paused map always shows current radar.
+  useEffect(() => {
+    if (radarFrames.length > 0) setFrameIdx(radarFrames.length - 1)
+  }, [radarFrames])
+
+  useEffect(() => {
+    if (!radarPlaying || radarFrames.length < 2) return
+    const onLatest = frameIdx === radarFrames.length - 1
+    const t = setTimeout(
+      () => setFrameIdx((frameIdx + 1) % radarFrames.length),
+      onLatest ? 1600 : 550,
+    )
+    return () => clearTimeout(t)
+  }, [radarPlaying, frameIdx, radarFrames])
 
   const dimmed = useMemo(() => {
     if (!dimmedIds) return new Set<string>()
@@ -226,6 +260,7 @@ export function StormMap({
         initialViewState={initialView ?? { longitude: -96, latitude: 38.5, zoom: 3.5 }}
         cooperativeGestures={cooperativeGestures}
         mapStyle={LIGHT_STYLE}
+        attributionControl={{ compact: true }}
         style={{ width: "100%", height: "100%" }}
         interactiveLayerIds={["storm-fill", "zip-dots"]}
         onClick={(e) => {
@@ -273,18 +308,30 @@ export function StormMap({
       >
         <NavigationControl position="top-right" />
 
-        {showRadar && radarTiles && (
-          <Source
-            id="radar"
-            type="raster"
-            tiles={radarTiles}
-            tileSize={256}
-            maxzoom={7}
-            attribution="Radar © RainViewer"
-          >
-            <Layer id="radar-layer" type="raster" paint={{ "raster-opacity": 0.6 }} />
-          </Source>
-        )}
+        {showRadar &&
+          radarFrames.map((f, i) => (
+            <Source
+              key={f.time}
+              id={`radar-${f.time}`}
+              type="raster"
+              tiles={f.tiles}
+              tileSize={256}
+              maxzoom={7}
+              attribution="Radar © RainViewer"
+            >
+              {/* All frames stay mounted (tiles cached); only the active one is
+                  visible, so the loop plays without re-fetching. */}
+              <Layer
+                id={`radar-layer-${f.time}`}
+                type="raster"
+                beforeId="radar-anchor"
+                paint={{
+                  "raster-opacity": i === frameIdx ? 0.6 : 0,
+                  "raster-fade-duration": 0,
+                }}
+              />
+            </Source>
+          ))}
 
         <Source id="storms" type="geojson" data={geojson}>
           {/* Soft outer halo to give each storm a glowing footprint. */}
@@ -420,6 +467,65 @@ export function StormMap({
       </Map>
 
       {showLegend && <MapLegend />}
+
+      {showRadar && radarFrames.length > 1 && (
+        <RadarLoopControl
+          frames={radarFrames}
+          frameIdx={frameIdx}
+          playing={radarPlaying}
+          onToggle={() => setRadarPlaying((p) => !p)}
+        />
+      )}
+    </div>
+  )
+}
+
+// Play/pause + frame clock for the radar loop. Shows how old the visible
+// frame is relative to the newest scan, so the animation never passes off
+// older radar as current conditions.
+function RadarLoopControl({
+  frames,
+  frameIdx,
+  playing,
+  onToggle,
+}: {
+  frames: RadarFrame[]
+  frameIdx: number
+  playing: boolean
+  onToggle: () => void
+}) {
+  const frame = frames[Math.min(frameIdx, frames.length - 1)]
+  const newest = frames[frames.length - 1]
+  const minutesBehind = Math.round((newest.time - frame.time) / 60)
+  return (
+    <div className="absolute bottom-12 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#D7E0EA] bg-white/95 py-1 pl-1 pr-3 shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={playing ? "Pause radar loop" : "Play radar loop"}
+        className="flex size-6 items-center justify-center rounded-full bg-[#0B2037] text-white transition hover:bg-[#0B2037]/90"
+      >
+        {playing ? (
+          <Pause className="size-3" />
+        ) : (
+          <Play className="size-3 translate-x-px" />
+        )}
+      </button>
+      <span className="font-mono text-[11px] font-semibold tabular-nums text-[#0B2037]">
+        {new Date(frame.time * 1000).toLocaleTimeString(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        })}
+      </span>
+      {minutesBehind === 0 ? (
+        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#1FA6E5]">
+          Latest
+        </span>
+      ) : (
+        <span className="text-[10px] uppercase tracking-[0.08em] text-[#8B98A8]">
+          −{minutesBehind}m
+        </span>
+      )}
     </div>
   )
 }

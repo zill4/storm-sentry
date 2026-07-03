@@ -56,6 +56,8 @@ TOMORROW_EVENTS_INTERVAL_SECONDS=1800 # CONUS events sweep cadence
 # DATABASE_URL=postgres://…           # enables the Postgres datastore (else in-memory)
 POLL_INTERVAL_SECONDS=60              # NWS poll cadence
 ENABLE_NWS_POLLER=true
+SEED_DEMO_BUSINESSES=true             # demo contractor roster (matcher/chat/api). NEVER set in prod.
+# GHL_DEV_NOTIFIER=true               # opt-in: run the live GHL notifier from a dev machine
 ```
 
 To refresh the bundled ZIP dataset: `node scripts/build-zcta.mjs`.

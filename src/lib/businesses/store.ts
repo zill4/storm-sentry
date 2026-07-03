@@ -18,7 +18,11 @@ declare global {
 function getStore(): BusinessShape {
   if (!globalThis.__stormSentryBusinesses) {
     const businesses = new Map<string, Business>()
-    for (const b of SEEDED_BUSINESSES) businesses.set(b.id, b)
+    // The demo contractor roster is strictly opt-in: fake businesses must never
+    // surface in production (API, chat pages, or match_created webhooks).
+    if (process.env.SEED_DEMO_BUSINESSES === "true") {
+      for (const b of SEEDED_BUSINESSES) businesses.set(b.id, b)
+    }
     globalThis.__stormSentryBusinesses = {
       businesses,
       matches: new Map(),

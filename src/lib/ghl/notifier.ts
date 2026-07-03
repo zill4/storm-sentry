@@ -271,6 +271,18 @@ export function ghlStats(): Stats & { pendingStorms: number; knownNotifications:
 }
 
 export async function startGhlNotifier(): Promise<{ started: boolean; reason?: string }> {
+  // Dev machines share the real GHL location AND the poller sees real storms —
+  // an unguarded local notifier competes with production for rate limits and
+  // can message real contacts. Opt in explicitly when that's intended.
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.GHL_DEV_NOTIFIER !== "true"
+  ) {
+    return {
+      started: false,
+      reason: "dev environment (set GHL_DEV_NOTIFIER=true to enable)",
+    }
+  }
   const s = getShape()
   if (s.unsubscribe) return { started: false, reason: "already running" }
 
