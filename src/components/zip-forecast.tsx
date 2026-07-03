@@ -15,6 +15,8 @@ type ApiOk = {
   ok: true
   cached: boolean
   stale: boolean
+  /** Server is in TOMORROW_OFFLINE mode — canned fixture, not a live forecast. */
+  sample?: boolean
   zip: string
   forecast: NormalizedForecast
 }
@@ -105,6 +107,13 @@ export function ZipForecast() {
 
         {data ? (
           <>
+            {data.sample && (
+              <Card className="rounded-2xl border border-[#F47A20]/40 bg-[#F47A20]/15 p-4 text-sm text-[#0B2037] shadow-sm">
+                <span className="font-semibold">Sample data.</span> The server is
+                in offline mode (<code>TOMORROW_OFFLINE=true</code>), so this is
+                a canned example forecast — not live conditions for {data.zip}.
+              </Card>
+            )}
             <HourlyChartCard hours={data.forecast.hourly.slice(0, 24)} />
             <DailyOutlookCard forecast={data.forecast} />
           </>

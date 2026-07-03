@@ -122,7 +122,14 @@ function normalizeForecast(raw: ForecastResponse, zip: string): NormalizedForeca
 }
 
 export type ForecastLookup =
-  | { ok: true; forecast: NormalizedForecast; cached: boolean; stale: boolean }
+  | {
+      ok: true
+      forecast: NormalizedForecast
+      cached: boolean
+      stale: boolean
+      /** True when TOMORROW_OFFLINE served the canned fixture — NOT live data. */
+      sample?: boolean
+    }
   | { ok: false; error: string; retryable: boolean }
 
 /**
@@ -132,9 +139,17 @@ export type ForecastLookup =
  */
 export async function getZipForecast(zip: string): Promise<ForecastLookup> {
   // Offline build mode: serve the captured real-shaped fixture, zero API calls.
+  // Flagged `sample: true` so the UI can say so — this is month-old canned data
+  // and must never silently pass for a live forecast.
   if (process.env.TOMORROW_OFFLINE === "true") {
     const raw = ForecastResponseSchema.parse(FORECAST_FIXTURE)
-    return { ok: true, forecast: normalizeForecast(raw, zip), cached: false, stale: false }
+    return {
+      ok: true,
+      forecast: normalizeForecast(raw, zip),
+      cached: false,
+      stale: false,
+      sample: true,
+    }
   }
 
   const cached = await readCache(zip)
