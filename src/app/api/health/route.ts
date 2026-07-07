@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { alertGateStats } from "@/lib/alerts/gate"
 import { ghlStats } from "@/lib/ghl/notifier"
 import { getPollerStatus, listActiveStorms } from "@/lib/storms/store"
 import { budgetStatus } from "@/lib/tomorrow/budget"
@@ -23,6 +24,7 @@ export function GET() {
     zipCoverage: zipCount(),
     zipInsights: zipInsightStats(),
     tomorrow: budgetStatus(),
+    alertGate: alertGateStats(),
     ghl: ghlStats(),
   })
 }

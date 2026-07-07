@@ -8,6 +8,10 @@ export type BusEvent =
   | { type: "storm_removed"; at: string; stormId: string }
   | { type: "zip_insight_added"; at: string; insight: ZipInsightEvent }
   | { type: "zip_insight_updated"; at: string; insight: ZipInsightEvent }
+  // Emitted by the per-ZIP alert gate (severity + cooldown passed). This — NOT
+  // the raw zip_insight_* events — is what the outbound channels (webhook, GHL)
+  // consume, so both are filtered identically server-side.
+  | { type: "zip_alert"; at: string; insight: ZipInsightEvent }
   | {
       type: "match_created"
       at: string

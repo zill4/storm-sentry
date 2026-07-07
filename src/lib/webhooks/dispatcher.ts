@@ -48,7 +48,7 @@ function buildPayload(event: Extract<BusEvent, { type: "match_created" }>) {
 }
 
 function buildZipInsightPayload(
-  event: Extract<BusEvent, { type: "zip_insight_added" }>,
+  event: Extract<BusEvent, { type: "zip_alert" }>,
 ) {
   const i = event.insight
   const distanceMiles = i.distanceMeters / 1609.344
@@ -153,8 +153,11 @@ export function startWebhookDispatcher(): { started: boolean; reason?: string } 
   const unsubscribe = subscribe((event) => {
     if (event.type === "match_created") {
       fanOut(event.type, buildPayload(event))
-    } else if (event.type === "zip_insight_added") {
-      fanOut(event.type, buildZipInsightPayload(event))
+    } else if (event.type === "zip_alert") {
+      // Consume the gated event, but keep the external subscription name +
+      // payload identical (storm_sentry.zip_insight.v1) — subscribers to
+      // "zip_insight_added" still match, so Zapier needs no change.
+      fanOut("zip_insight_added", buildZipInsightPayload(event))
     }
   })
   globalThis.__stormSentryWebhookDispatcher = { unsubscribe }

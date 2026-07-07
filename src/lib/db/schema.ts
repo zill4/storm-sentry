@@ -128,6 +128,18 @@ export const forecastCache = pgTable("forecast_cache", {
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
 })
 
+// Per-ZIP outbound-alert throttle. One row per ZIP; the alert gate refuses to
+// re-fire for a ZIP within its cooldown window, so a single storm event (which
+// NWS re-warns under many IDs) triggers each ZIP at most once per window.
+// Hydrated into memory at boot so a redeploy can't reset the cooldown.
+export const zipAlerts = pgTable("zip_alerts", {
+  zip: text("zip").primaryKey(),
+  lastStormId: text("last_storm_id").notNull(),
+  lastSeverity: text("last_severity").notNull(),
+  lastAlertedAt: timestamp("last_alerted_at", { withTimezone: true }).notNull(),
+  alertCount: integer("alert_count").notNull().default(1),
+})
+
 // One row per contact×storm GHL notification — the idempotency ledger that
 // guarantees a contact is never re-messaged for the same storm, even across
 // restarts/redeploys.

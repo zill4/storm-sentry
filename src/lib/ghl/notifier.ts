@@ -3,7 +3,6 @@ import { subscribe } from "@/lib/bus"
 import { getDb, isDbConfigured } from "@/lib/db/client"
 import { ghlNotifications } from "@/lib/db/schema"
 import { formatEta } from "@/lib/storms/eta"
-import { severityRank } from "@/lib/storms/types"
 import type { ZipInsightEvent } from "@/lib/zip-insights/types"
 import {
   addTagToContact,
@@ -54,24 +53,24 @@ export function stormFieldValues(zip: string, ctx: ZipStormContext): Record<stri
   }
 }
 
-// Severe-storm → GHL automation. When a NEW Severe/Extreme storm threatens
-// ZIPs, find every GHL contact with a matching postal code and add the alert
+// GHL delivery channel for the per-ZIP alert gate. Consumes `zip_alert` events
+// (already severity-gated + per-ZIP-cooldown'd upstream — see lib/alerts/gate.ts),
+// finds every GHL contact whose postal code matches the ZIP, and adds the alert
 // tag; a GHL workflow ("contact tagged → send message") does the messaging.
 //
 // Safety properties (this path reaches real customers):
-//  - severity gate: only storms at/above GHL_MIN_SEVERITY (default Severe)
-//  - fixture storms are EXCLUDED unless GHL_ALLOW_FIXTURES=true
+//  - all severity / fixture / anti-spam filtering happens in the ZIP alert gate;
+//    this module only ever receives ZIPs that already cleared it.
 //  - idempotent per contact×storm, persisted to Postgres and hydrated at boot,
-//    so restarts/redeploys can never re-message anyone
-//  - hard cap on contacts tagged per storm (GHL_MAX_CONTACTS_PER_STORM)
-//  - per-ZIP contact lookups are cached (TTL) and all calls are throttled
+//    so restarts/redeploys can never re-message anyone for the same warning.
+//  - hard cap on contacts tagged per storm (GHL_MAX_CONTACTS_PER_STORM).
+//  - per-ZIP contact lookups are cached (TTL) and all calls are throttled.
 
 type Stats = {
   enabled: boolean
   tagged: number
   failed: number
   skippedDisabled: number
-  skippedFixture: number
   stormsProcessed: number
   lastError: string | null
   lastRunAt: string | null
@@ -104,7 +103,6 @@ function getShape(): Shape {
         tagged: 0,
         failed: 0,
         skippedDisabled: 0,
-        skippedFixture: 0,
         stormsProcessed: 0,
         lastError: null,
         lastRunAt: null,
@@ -112,10 +110,6 @@ function getShape(): Shape {
     }
   }
   return globalThis.__stormSentryGhlNotifier
-}
-
-function minRank(): number {
-  return severityRank(process.env.GHL_MIN_SEVERITY ?? "Severe")
 }
 
 function alertTag(): string {
@@ -232,12 +226,9 @@ async function flushStorm(stormId: string): Promise<void> {
   )
 }
 
+// Batch the per-ZIP alerts of one storm (arriving within a poll cycle) into a
+// single flush. Severity / fixture / cooldown are already enforced by the gate.
 function consider(insight: ZipInsightEvent): void {
-  if (severityRank(insight.severity) < minRank()) return
-  if (insight.source === "fixture" && process.env.GHL_ALLOW_FIXTURES !== "true") {
-    getShape().stats.skippedFixture++
-    return
-  }
   const s = getShape()
   const ctx: ZipStormContext = {
     eventType: insight.eventType,
@@ -299,9 +290,7 @@ export async function startGhlNotifier(): Promise<{ started: boolean; reason?: s
   }
 
   s.unsubscribe = subscribe((event) => {
-    if (event.type === "zip_insight_added" || event.type === "zip_insight_updated") {
-      consider(event.insight)
-    }
+    if (event.type === "zip_alert") consider(event.insight)
   })
   return { started: true }
 }

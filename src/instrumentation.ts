@@ -14,6 +14,13 @@ export async function register() {
   console.log(
     `[storm-sentry] poller ${pollerResult.started ? "started" : `not started (${pollerResult.reason})`}`,
   )
+  // The per-ZIP alert gate must be live before the outbound channels so it can
+  // re-emit `zip_alert` events for them to consume.
+  const { startAlertGate } = await import("./lib/alerts/gate")
+  const gateResult = await startAlertGate()
+  console.log(
+    `[storm-sentry] alert gate ${gateResult.started ? "started" : `not started (${gateResult.reason})`}`,
+  )
   const { startWebhookDispatcher } = await import("./lib/webhooks/dispatcher")
   const dispatcherResult = startWebhookDispatcher()
   console.log(

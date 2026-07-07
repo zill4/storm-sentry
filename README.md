@@ -161,14 +161,33 @@ Setup:
    sequence — custom fields + retag — on one contact with clearly-marked TEST
    data, so you can watch the workflow fire and check the merge tags render.
 
-Safety rails (defaults): only severity ≥ `GHL_MIN_SEVERITY` (Severe);
-**fixture storms never notify** unless `GHL_ALLOW_FIXTURES=true`; idempotent
-per contact×storm via the `ghl_notifications` table (redeploys can't
-re-message); ≤ `GHL_MAX_CONTACTS_PER_STORM` (500) per storm; per-ZIP contact
-lookups cached `GHL_CONTACT_CACHE_TTL_MIN` (360) and throttled
-(`GHL_MIN_CALL_GAP_MS`, 350). If your tenant's searchable postal field differs,
-set `GHL_ZIP_FIELD` (default `postalCode`). Live stats at `GET /api/health`
-under `ghl`.
+### The ZIP alert gate (filters BOTH channels)
+
+All outbound alerting — the Zapier webhook **and** the GHL notifier — flows
+through one server-side gate (`src/lib/alerts/gate.ts`), keyed entirely by ZIP,
+so there's nothing to configure on Zapier or GHL. A ZIP fires an alert only
+when it clears:
+
+- **Severity** — `ALERT_MIN_SEVERITY` (default `Severe`): only `Severe`/`Extreme`.
+- **Fixtures** — excluded unless `ALERT_ALLOW_FIXTURES=true`.
+- **Per-ZIP cooldown** — `ALERT_ZIP_COOLDOWN_HOURS` (default `24`): each ZIP
+  triggers at most once per window, **even as NWS renews the same storm under
+  new alert IDs** (the root cause of repeat pings — one contact had been tagged
+  27× / up to 12 in a day before this). Persisted in the `zip_alerts` table and
+  hydrated at boot, so a redeploy mid-event can't reopen the floodgates. Set `0`
+  to disable, or lower (e.g. `6`) to allow a genuinely separate later-day storm.
+
+On pass it emits an internal `zip_alert` the channels consume; the external
+webhook `event_type` and subscription name are unchanged. Live counts
+(`emitted`, `skippedSeverity`, `skippedCooldown`) at `GET /api/health` under
+`alertGate`.
+
+GHL delivery rails on top of the gate (defaults): idempotent per contact×storm
+via `ghl_notifications` (redeploys can't re-message for the same warning); ≤
+`GHL_MAX_CONTACTS_PER_STORM` (500) per storm; per-ZIP contact lookups cached
+`GHL_CONTACT_CACHE_TTL_MIN` (360) and throttled (`GHL_MIN_CALL_GAP_MS`, 350). If
+your tenant's searchable postal field differs, set `GHL_ZIP_FIELD` (default
+`postalCode`). GHL stats at `GET /api/health` under `ghl`.
 
 ## Demo endpoints in production
 
