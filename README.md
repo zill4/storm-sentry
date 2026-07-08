@@ -150,7 +150,7 @@ Setup:
    | `storm_zip` | 75201 (the contact's own ZIP) |
    | `storm_headline` | Tornado Warning issued June 11… |
    | `storm_expires` | Jun 11, 4:45 PM CDT (`GHL_TIME_ZONE`, default America/Chicago) |
-   | `storm_eta` | `~40 minutes` (empty string when the storm is already overhead — branch your copy on it) |
+   | `storm_eta` | `~40 minutes` / `arriving now`; `imminent` when the storm is already overhead. **Never blank**, so you can use it inline (e.g. `ETA: {{contact.storm_eta}}`) without a fallback branch. |
    | `storm_link` | `https://…/zip/75201` (public no-auth storm report for the contact's ZIP) |
 
    Example SMS: `⚠️ {{contact.storm_event_type}} ({{contact.storm_severity}})

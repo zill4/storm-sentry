@@ -45,9 +45,12 @@ export function stormFieldValues(zip: string, ctx: ZipStormContext): Record<stri
     storm_zip: zip,
     storm_headline: (ctx.headline ?? ctx.eventType).slice(0, 200),
     storm_expires: expires,
-    // "~40 minutes" / "~2 hours" / "" when unknown — workflows should branch
-    // on the empty case ("tracking into your area right now").
-    storm_eta: formatEta(ctx.etaMinutes) ?? "",
+    // "~40 minutes" / "~2 hours" / "arriving now" for computed ETAs; "imminent"
+    // when no estimate is possible — which happens precisely when a warning is
+    // already in effect over the ZIP with no motion vector, i.e. the storm is
+    // overhead. Never blank, so templates can use {{contact.storm_eta}} inline
+    // (e.g. "ETA: {{contact.storm_eta}}") without a fallback branch.
+    storm_eta: formatEta(ctx.etaMinutes) ?? "imminent",
     // Public no-auth storm report the message can link to.
     storm_link: zipReportUrl(zip),
   }
