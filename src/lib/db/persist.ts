@@ -1,8 +1,9 @@
-import { eq, notInArray } from "drizzle-orm"
+import { desc, eq, lt, notInArray } from "drizzle-orm"
 
 import { getDb, isDbConfigured } from "./client"
-import { storms, tomorrowBudget, zipInsights } from "./schema"
+import { storms, tomorrowBudget, webhookDeliveries, webhooks, zipInsights } from "./schema"
 import type { StormEvent } from "../storms/types"
+import type { WebhookDelivery, WebhookSubscription } from "../webhooks/store"
 import type { ZipInsightEvent } from "../zip-insights/types"
 
 // Write-through persistence: the in-memory globalThis stores stay the hot read
@@ -127,6 +128,65 @@ export function persistBudgetCounters(snap: {
     .catch(logErr("budget upsert"))
 }
 
+// --- Webhook subscriptions + delivery log ---
+// Zapier catch-hooks are registered via POST /api/webhooks. Without write-through
+// they'd live only in memory and a redeploy would silently kill the feed.
+
+const WEBHOOK_DELIVERY_RETENTION_MS = 14 * 24 * 60 * 60 * 1000
+
+export function persistWebhook(s: WebhookSubscription): void {
+  if (!isDbConfigured()) return
+  const row = {
+    id: s.id,
+    url: s.url,
+    secret: s.secret,
+    events: s.events,
+    createdAt: ts(s.createdAt) ?? new Date(),
+    attempts: s.attempts,
+    successes: s.successes,
+    failures: s.failures,
+    lastDispatchAt: ts(s.lastDispatchAt),
+    lastError: s.lastError,
+    lastStatus: s.lastStatus,
+  }
+  void getDb()
+    .insert(webhooks)
+    .values(row)
+    .onConflictDoUpdate({ target: webhooks.id, set: row })
+    .catch(logErr("webhook upsert"))
+}
+
+export function deleteWebhookRow(id: string): void {
+  if (!isDbConfigured()) return
+  void getDb().delete(webhooks).where(eq(webhooks.id, id)).catch(logErr("webhook delete"))
+}
+
+export function persistWebhookDelivery(d: WebhookDelivery): void {
+  if (!isDbConfigured()) return
+  const db = getDb()
+  void db
+    .insert(webhookDeliveries)
+    .values({
+      id: d.id,
+      subscriptionId: d.subscriptionId,
+      url: d.url,
+      eventType: d.eventType,
+      status: d.status,
+      ok: d.ok,
+      error: d.error,
+      attemptedAt: ts(d.attemptedAt) ?? new Date(),
+      durationMs: d.durationMs,
+      payloadPreview: d.payloadPreview,
+    })
+    .onConflictDoNothing()
+    .catch(logErr("webhook delivery insert"))
+  // Keep the log bounded (mirrors the in-memory ring buffer).
+  void db
+    .delete(webhookDeliveries)
+    .where(lt(webhookDeliveries.attemptedAt, new Date(Date.now() - WEBHOOK_DELIVERY_RETENTION_MS)))
+    .catch(logErr("webhook delivery prune"))
+}
+
 export type BudgetSeed = {
   dayKey: string
   dayCount: number
@@ -142,8 +202,9 @@ export async function hydrateFromDb(): Promise<{
   storms: number
   zipInsights: number
   budget: boolean
+  webhooks: number
 }> {
-  if (!isDbConfigured()) return { storms: 0, zipInsights: 0, budget: false }
+  if (!isDbConfigured()) return { storms: 0, zipInsights: 0, budget: false, webhooks: 0 }
   const db = getDb()
 
   const stormRows = await db.select().from(storms)
@@ -223,5 +284,46 @@ export async function hydrateFromDb(): Promise<{
     budget = true
   }
 
-  return { storms: stormRows.length, zipInsights: ziRows.length, budget }
+  const webhookRows = await db.select().from(webhooks)
+  const deliveryRows = await db
+    .select()
+    .from(webhookDeliveries)
+    .orderBy(desc(webhookDeliveries.attemptedAt))
+    .limit(200)
+  const { hydrateWebhooks } = await import("../webhooks/store")
+  hydrateWebhooks(
+    webhookRows.map((r) => ({
+      id: r.id,
+      url: r.url,
+      secret: r.secret,
+      events: r.events,
+      createdAt: iso(r.createdAt) ?? new Date().toISOString(),
+      attempts: r.attempts,
+      successes: r.successes,
+      failures: r.failures,
+      lastDispatchAt: iso(r.lastDispatchAt),
+      lastError: r.lastError,
+      lastStatus: r.lastStatus,
+    })),
+    // Already newest-first from the query — matches the in-memory ring buffer.
+    deliveryRows.map((r) => ({
+      id: r.id,
+      subscriptionId: r.subscriptionId,
+      url: r.url,
+      eventType: r.eventType,
+      status: r.status,
+      ok: r.ok,
+      error: r.error,
+      attemptedAt: iso(r.attemptedAt) ?? new Date().toISOString(),
+      durationMs: r.durationMs,
+      payloadPreview: r.payloadPreview,
+    })),
+  )
+
+  return {
+    storms: stormRows.length,
+    zipInsights: ziRows.length,
+    budget,
+    webhooks: webhookRows.length,
+  }
 }

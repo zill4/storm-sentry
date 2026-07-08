@@ -4,7 +4,7 @@ export async function register() {
     const { hydrateFromDb } = await import("./lib/db/persist")
     const h = await hydrateFromDb()
     console.log(
-      `[storm-sentry] hydrated from db: ${h.storms} storms, ${h.zipInsights} zip insights, budget=${h.budget}`,
+      `[storm-sentry] hydrated from db: ${h.storms} storms, ${h.zipInsights} zip insights, ${h.webhooks} webhooks, budget=${h.budget}`,
     )
   } catch (err) {
     console.error("[storm-sentry] db hydration failed (continuing in-memory)", err)

@@ -1,3 +1,9 @@
+import {
+  deleteWebhookRow,
+  persistWebhook,
+  persistWebhookDelivery,
+} from "../db/persist"
+
 export type WebhookSubscription = {
   id: string
   url: string
@@ -77,11 +83,14 @@ export function createWebhook(opts: {
     lastStatus: null,
   }
   getStore().subs.set(id, sub)
+  persistWebhook(sub)
   return sub
 }
 
 export function deleteWebhook(id: string): boolean {
-  return getStore().subs.delete(id)
+  const existed = getStore().subs.delete(id)
+  if (existed) deleteWebhookRow(id)
+  return existed
 }
 
 export function recordDelivery(d: WebhookDelivery): void {
@@ -99,8 +108,23 @@ export function recordDelivery(d: WebhookDelivery): void {
   if (store.deliveries.length > MAX_DELIVERIES) {
     store.deliveries.length = MAX_DELIVERIES
   }
+  persistWebhookDelivery(d)
+  if (sub) persistWebhook(sub) // mirror the bumped attempt/success/failure counters
 }
 
 export function listDeliveries(limit = 50): WebhookDelivery[] {
   return getStore().deliveries.slice(0, limit)
+}
+
+/**
+ * Load subscriptions + recent deliveries back into memory at boot (called by
+ * hydrateFromDb). No re-persist. `deliveries` must be newest-first.
+ */
+export function hydrateWebhooks(
+  subs: WebhookSubscription[],
+  deliveries: WebhookDelivery[],
+): void {
+  const store = getStore()
+  for (const s of subs) store.subs.set(s.id, s)
+  if (deliveries.length) store.deliveries = deliveries.slice(0, MAX_DELIVERIES)
 }
