@@ -7,6 +7,7 @@ import {
   markExported,
   zipInsightStats,
 } from "@/lib/zip-insights/store"
+import { getPlace } from "@/lib/zips/places"
 
 export const dynamic = "force-dynamic"
 
@@ -42,10 +43,14 @@ export function GET(req: Request) {
     if (sev !== 0) return sev
     return b.updatedAt.localeCompare(a.updatedAt)
   })
-  events = events.slice(0, limit)
+  // Additive enrichment: city/state label per ZIP (server-only dataset), so
+  // clients can render and search by place without shipping the dataset.
+  const enriched = events
+    .slice(0, limit)
+    .map((e) => ({ ...e, place: getPlace(e.zip) }))
 
   if (format === "ndjson") {
-    const body = events.map((e) => JSON.stringify(e)).join("\n")
+    const body = enriched.map((e) => JSON.stringify(e)).join("\n")
     return new Response(body, {
       headers: {
         "Content-Type": "application/x-ndjson; charset=utf-8",
@@ -56,10 +61,10 @@ export function GET(req: Request) {
   }
 
   return NextResponse.json({
-    count: events.length,
+    count: enriched.length,
     stats: zipInsightStats(),
     fetchedAt: new Date().toISOString(),
-    events,
+    events: enriched,
   })
 }
 

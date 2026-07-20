@@ -50,6 +50,20 @@
       "when": 1783455342707,
       "tag": "0006_loud_roxanne_simpson",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784324463030,
+      "tag": "0007_bouncy_nuke",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784324935330,
+      "tag": "0008_large_kate_bishop",
+      "breakpoints": true
     }
   ]
 }

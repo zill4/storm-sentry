@@ -2,6 +2,7 @@ import { Bell, Bookmark, Settings } from "lucide-react"
 
 import { SignOutButton } from "@/components/auth/sign-out-button"
 import { requireUser } from "@/lib/auth/session"
+import { claimProspects } from "@/lib/referrals/store"
 
 export const dynamic = "force-dynamic"
 
@@ -25,6 +26,10 @@ const GATED_FEATURES = [
 
 export default async function AccountPage() {
   const { user } = await requireUser()
+  // Lazy soft-account linkage: if this user's email matches a CRM prospect we
+  // alerted (see lib/referrals), claim it so their site account and CRM
+  // identity are connected. Idempotent — claimed rows are skipped.
+  await claimProspects(user.id, user.email)
   const initial = (user.name?.trim()?.[0] ?? user.email[0] ?? "?").toUpperCase()
   const memberSince = new Date(user.createdAt).toLocaleDateString(undefined, {
     month: "long",

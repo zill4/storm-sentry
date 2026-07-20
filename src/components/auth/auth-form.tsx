@@ -11,10 +11,19 @@ const INPUT =
   "w-full rounded-lg border border-[#D7E0EA] bg-white px-3 py-2.5 text-sm text-[#0B2037] outline-none transition placeholder:text-[#8B98A8] focus:border-[#1FA6E5] focus:ring-2 focus:ring-[#1FA6E5]/25"
 const LABEL = "text-xs font-medium text-[#5A6B7E]"
 
-export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
+export function AuthForm({
+  mode,
+  defaultName,
+  defaultEmail,
+}: {
+  mode: "sign-in" | "sign-up"
+  /** Prefill for visitors we already know from an alert link (see /api/visit). */
+  defaultName?: string
+  defaultEmail?: string
+}) {
   const isSignUp = mode === "sign-up"
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
+  const [name, setName] = useState(defaultName ?? "")
+  const [email, setEmail] = useState(defaultEmail ?? "")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)

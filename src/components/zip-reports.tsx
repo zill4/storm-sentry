@@ -22,8 +22,30 @@ import { useLiveEvents } from "@/lib/use-live-events"
 import { severityHex } from "@/lib/storms/severity"
 import { severityRank, type StormEvent } from "@/lib/storms/types"
 import type { ZipInsightEvent } from "@/lib/zip-insights/types"
+import { STATE_NAMES } from "@/lib/zips/state-names"
 
 const CARD = "rounded-2xl border border-[#D7E0EA] bg-[#FFFFFF] shadow-sm"
+
+/** API items arrive enriched with a server-side city/state lookup. */
+type ReportItem = ZipInsightEvent & {
+  place?: { city: string; state: string } | null
+}
+
+/** Free-text match: ZIP prefix (digits), else city / state / "City, ST". */
+function matchesQuery(z: ReportItem, q: string): boolean {
+  if (!q) return true
+  if (/^\d+$/.test(q)) return z.zip.startsWith(q)
+  const needle = q.toLowerCase()
+  const city = z.place?.city.toLowerCase() ?? ""
+  const state = z.place?.state ?? ""
+  const stateFull = (STATE_NAMES[state] ?? "").toLowerCase()
+  return (
+    city.includes(needle) ||
+    state.toLowerCase() === needle ||
+    stateFull.startsWith(needle) ||
+    `${city}, ${state.toLowerCase()}`.includes(needle)
+  )
+}
 
 type SevFilter = "all" | "moderate" | "severe" | "extreme"
 const SEV_FILTERS: { key: SevFilter; label: string; minRank: number }[] = [
@@ -52,7 +74,7 @@ function formatTime(iso: string | null | undefined): string {
 }
 
 export function ZipReports() {
-  const [insights, setInsights] = useState<ZipInsightEvent[]>([])
+  const [insights, setInsights] = useState<ReportItem[]>([])
   const [stormsById, setStormsById] = useState<Map<string, StormEvent>>(new Map())
   const [updated, setUpdated] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -69,7 +91,7 @@ export function ZipReports() {
         fetch("/api/storms", { cache: "no-store" }),
       ])
       if (ziRes.ok) {
-        const data = (await ziRes.json()) as { events: ZipInsightEvent[] }
+        const data = (await ziRes.json()) as { events: ReportItem[] }
         setInsights(data.events)
       }
       if (stRes.ok) {
@@ -101,7 +123,7 @@ export function ZipReports() {
     const minRank = SEV_FILTERS.find((f) => f.key === sev)?.minRank ?? 0
     return insights
       .filter((z) => severityRank(z.severity) >= minRank)
-      .filter((z) => (q ? z.zip.startsWith(q) : true))
+      .filter((z) => matchesQuery(z, q))
       .sort((a, b) => {
         const s = severityRank(b.severity) - severityRank(a.severity)
         if (s !== 0) return s
@@ -132,10 +154,9 @@ export function ZipReports() {
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8B98A8]" />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value.replace(/[^0-9]/g, ""))}
-              inputMode="numeric"
-              maxLength={5}
-              placeholder="Filter by ZIP code…"
+              onChange={(e) => setQuery(e.target.value)}
+              maxLength={40}
+              placeholder="Search ZIP, city, or state…"
               className="w-full rounded-lg border border-[#D7E0EA] bg-[#FFFFFF] py-2 pl-9 pr-3 text-sm text-[#0B2037] outline-none placeholder:text-[#8B98A8] focus:border-[#0B2037]/40"
             />
           </div>
@@ -206,11 +227,20 @@ export function ZipReports() {
                       className="size-2.5 shrink-0 rounded-full"
                       style={{ backgroundColor: color }}
                     />
-                    <span className="font-mono text-sm font-semibold tabular-nums text-[#0B2037]">
-                      {z.zip}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-xs text-[#5A6B7E]">
-                      {z.eventType}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline gap-2">
+                        <span className="font-mono text-sm font-semibold tabular-nums text-[#0B2037]">
+                          {z.zip}
+                        </span>
+                        {z.place && (
+                          <span className="min-w-0 truncate text-xs text-[#5A6B7E]">
+                            {z.place.city}, {z.place.state}
+                          </span>
+                        )}
+                      </span>
+                      <span className="block truncate text-xs text-[#8B98A8]">
+                        {z.eventType} · {formatTime(z.createdAt)}
+                      </span>
                     </span>
                     {z.nowcast && (
                       <span className="shrink-0 rounded-full bg-[#E4EBF3] px-1.5 py-0.5 text-[10px] font-medium text-[#5A6B7E]">
@@ -251,7 +281,7 @@ function ReportDetail({
   insight,
   storm,
 }: {
-  insight: ZipInsightEvent
+  insight: ReportItem
   storm: StormEvent | undefined
 }) {
   const color = severityHex(insight.severity)
@@ -287,6 +317,12 @@ function ReportDetail({
             {SOURCE_LABEL[insight.source]}
           </Badge>
         </div>
+        {insight.place && (
+          <div className="mt-1 flex items-center gap-1.5 text-sm font-medium text-[#0B2037]">
+            <MapPin className="size-3.5 text-[#1FA6E5]" />
+            {insight.place.city}, {insight.place.state}
+          </div>
+        )}
         <div className="mt-1.5 text-sm font-medium text-[#0B2037]">
           {insight.eventType}
         </div>
@@ -307,7 +343,8 @@ function ReportDetail({
           <div className="flex items-start gap-2">
             <Clock className="mt-0.5 size-3.5 shrink-0 text-[#8B98A8]" />
             <span>
-              {formatTime(startedAt)} → {formatTime(expiresAt)}
+              {formatTime(startedAt)} → {formatTime(expiresAt)} · detected{" "}
+              {formatTime(insight.createdAt)}
             </span>
           </div>
           <div className="flex items-start gap-2">

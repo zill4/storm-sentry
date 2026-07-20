@@ -1,17 +1,27 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowRight, Clock, Droplets, MapPin, Thermometer, Wind } from "lucide-react"
+import {
+  ArrowRight,
+  Clock,
+  Droplets,
+  History,
+  MapPin,
+  Thermometer,
+  Wind,
+} from "lucide-react"
 
 import { AutoRefresh } from "@/components/auto-refresh"
 import { ZipMap } from "@/components/zip-map"
+import { recentAlertHistory } from "@/lib/alerts/history"
 import { estimateEta, formatEta } from "@/lib/storms/eta"
 import { severityBadgeClass, severityHex } from "@/lib/storms/severity"
 import { listActiveStorms } from "@/lib/storms/store"
 import { severityRank, type StormEvent } from "@/lib/storms/types"
 import { getCachedNowcast } from "@/lib/tomorrow/nowcast"
 import { listZipInsights } from "@/lib/zip-insights/store"
-import { getZip } from "@/lib/zips/store"
+import { getPlace, placeLabel } from "@/lib/zips/places"
+import { getZip, zipsNear } from "@/lib/zips/store"
 
 export const dynamic = "force-dynamic"
 
@@ -141,6 +151,23 @@ export default async function ZipReportPage({
     })
 
   const nowcast = getCachedNowcast(zip)
+  const place = getPlace(zip)
+
+  // Recent severe-weather tail: this ZIP plus its neighbors (~25 mi), from the
+  // append-only zip_alert_events history — storms stay visible here after they
+  // expire and drop off the live sections above.
+  const nearby = zipsNear(zip, 25, 30)
+  const nearbyMiles = new Map(nearby.map((n) => [n.zip, n.miles]))
+  const activeIds = new Set(threats.map((t) => t.insight.id))
+  const history = (
+    await recentAlertHistory({
+      zips: [zip, ...nearby.map((n) => n.zip)],
+      days: 30,
+      limit: 40,
+    })
+  )
+    .filter((h) => !activeIds.has(h.id)) // live cards above already cover these
+    .slice(0, 15)
 
   // Map payload: this ZIP's threats + context storms within ~250 km.
   const threatIds = new Set(threats.map((t) => t.insight.stormId))
@@ -163,6 +190,12 @@ export default async function ZipReportPage({
           <h1 className="font-display text-4xl tracking-tight sm:text-5xl">
             ZIP {zip}
           </h1>
+          {place && (
+            <div className="flex items-center gap-1.5 text-sm font-medium text-[#0B2037]">
+              <MapPin className="size-4 text-[#1FA6E5]" />
+              {place.city}, {place.state}
+            </div>
+          )}
           <p className="text-sm leading-6 text-[#5A6B7E]">
             Live National Weather Service alerts for this area, with storm
             arrival estimates from radar-tracked cell motion. Updated{" "}
@@ -242,6 +275,54 @@ export default async function ZipReportPage({
             ))}
           </section>
         )}
+
+        {/* Recent severe weather in and around this ZIP — survives storm expiry. */}
+        <section className="rounded-2xl border border-[#D7E0EA] bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-[#5A6B7E]">
+            <History className="size-3.5 text-[#8B98A8]" />
+            Recent severe weather · {place ? `${place.city} area` : "this area"} · past 30 days
+          </div>
+          {history.length === 0 ? (
+            <p className="mt-3 text-sm leading-6 text-[#5A6B7E]">
+              No severe weather has been recorded within ~25 miles of {zip} in
+              the past 30 days.
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-[#EEF3F9]">
+              {history.map((h) => {
+                const miles = h.zip === zip ? null : nearbyMiles.get(h.zip)
+                const hPlace = h.zip === zip ? null : placeLabel(h.zip)
+                return (
+                  <li key={h.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: severityHex(h.severity) }}
+                      aria-hidden
+                    />
+                    <span className="w-[7.5rem] shrink-0 text-xs tabular-nums text-[#8B98A8]">
+                      {formatTime(h.recordedAt)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-[#0B2037]">
+                      {h.eventType}
+                    </span>
+                    <span className="text-xs text-[#5A6B7E]">
+                      {h.zip === zip ? (
+                        <span className="font-semibold text-[#1FA6E5]">This ZIP</span>
+                      ) : (
+                        <>
+                          {hPlace ?? `ZIP ${h.zip}`}
+                          {miles != null && (
+                            <span className="text-[#8B98A8]"> · {miles.toFixed(0)} mi</span>
+                          )}
+                        </>
+                      )}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
 
         {nowcast && (
           <section className="rounded-2xl border border-[#D7E0EA] bg-white p-5 shadow-sm">

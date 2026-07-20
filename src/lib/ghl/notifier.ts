@@ -2,6 +2,7 @@ import { zipReportUrl } from "@/lib/app-url"
 import { subscribe } from "@/lib/bus"
 import { getDb, isDbConfigured } from "@/lib/db/client"
 import { ghlNotifications } from "@/lib/db/schema"
+import { ensureLinkToken, withVisitToken } from "@/lib/referrals/store"
 import { formatEta } from "@/lib/storms/eta"
 import type { ZipInsightEvent } from "@/lib/zip-insights/types"
 import {
@@ -23,7 +24,11 @@ export type ZipStormContext = {
   etaMinutes: number | null
 }
 
-export function stormFieldValues(zip: string, ctx: ZipStormContext): Record<string, string> {
+export function stormFieldValues(
+  zip: string,
+  ctx: ZipStormContext,
+  opts?: { visitToken?: string | null },
+): Record<string, string> {
   const tz = process.env.GHL_TIME_ZONE ?? "America/Chicago"
   let expires = ""
   if (ctx.expiresAt) {
@@ -51,8 +56,10 @@ export function stormFieldValues(zip: string, ctx: ZipStormContext): Record<stri
     // overhead. Never blank, so templates can use {{contact.storm_eta}} inline
     // (e.g. "ETA: {{contact.storm_eta}}") without a fallback branch.
     storm_eta: formatEta(ctx.etaMinutes) ?? "imminent",
-    // Public no-auth storm report the message can link to.
-    storm_link: zipReportUrl(zip),
+    // Public no-auth storm report the message can link to. The per-contact
+    // visit token (opaque — no PII in URLs) attributes site visits to the
+    // alerted contact and powers sign-up prefill.
+    storm_link: withVisitToken(zipReportUrl(zip), opts?.visitToken ?? null),
   }
 }
 
@@ -74,6 +81,7 @@ type Stats = {
   tagged: number
   failed: number
   skippedDisabled: number
+  skippedDuplicate: number
   stormsProcessed: number
   lastError: string | null
   lastRunAt: string | null
@@ -106,6 +114,7 @@ function getShape(): Shape {
         tagged: 0,
         failed: 0,
         skippedDisabled: 0,
+        skippedDuplicate: 0,
         stormsProcessed: 0,
         lastError: null,
         lastRunAt: null,
@@ -117,6 +126,21 @@ function getShape(): Shape {
 
 function alertTag(): string {
   return process.env.GHL_ALERT_TAG ?? "storm-alert"
+}
+
+/**
+ * Normalized identity keys for duplicate-human detection: last-10 phone digits
+ * and lowercased email. Two contact records sharing any key are the same
+ * person (e.g. "Dean Talley" + "dean Talley" under different ids) and must not
+ * both be messaged for one storm.
+ */
+export function contactIdentityKeys(c: Pick<GhlContact, "phone" | "email">): string[] {
+  const keys: string[] = []
+  const digits = (c.phone ?? "").replace(/\D/g, "")
+  if (digits.length >= 7) keys.push(`p:${digits.slice(-10)}`)
+  const email = (c.email ?? "").trim().toLowerCase()
+  if (email) keys.push(`e:${email}`)
+  return keys
 }
 
 async function cachedContacts(zip: string): Promise<GhlContact[]> {
@@ -133,7 +157,7 @@ function recordNotification(row: {
   contactId: string
   stormId: string
   zip: string
-  status: "tagged" | "failed"
+  status: "tagged" | "failed" | "skipped_duplicate"
   error?: string | null
 }): void {
   if (!isDbConfigured()) return
@@ -175,6 +199,12 @@ async function flushStorm(stormId: string): Promise<void> {
   const zips = [...entry.zips.entries()].slice(0, maxZips)
   let taggedThisStorm = 0
 
+  // CRMs accumulate duplicate contact records for the same human (same phone/
+  // email under two ids) — tagging both would double-message one person for one
+  // storm. Track normalized phone/email identities already handled this flush
+  // and skip any later record that matches one.
+  const seenIdentity = new Set<string>()
+
   for (const [zip, ctx] of zips) {
     if (taggedThisStorm >= maxContacts) break
     let contacts: GhlContact[]
@@ -189,6 +219,24 @@ async function flushStorm(stormId: string): Promise<void> {
       if (taggedThisStorm >= maxContacts) break
       const key = `${c.id}:${stormId}`
       if (s.notified.has(key)) continue
+      const keys = contactIdentityKeys(c)
+      const dupeKey = keys.find((k) => seenIdentity.has(k))
+      if (dupeKey) {
+        // Same human under another contact id — already messaged this storm.
+        s.notified.add(key)
+        s.stats.skippedDuplicate++
+        recordNotification({
+          contactId: c.id,
+          stormId,
+          zip,
+          status: "skipped_duplicate",
+          error: `duplicate ${dupeKey.startsWith("p:") ? "phone" : "email"} of an already-notified contact`,
+        })
+        console.log(
+          `[ghl] skipped duplicate contact ${c.id} (${zip}) — same ${dupeKey.startsWith("p:") ? "phone" : "email"} already notified for this storm`,
+        )
+        continue
+      }
       s.notified.add(key)
       try {
         // Write the storm context onto the contact FIRST so the workflow's
@@ -196,7 +244,8 @@ async function flushStorm(stormId: string): Promise<void> {
         // when the tag event fires. Best-effort: a missing custom field must
         // not block the alert itself.
         try {
-          await updateContactStormFields(c.id, stormFieldValues(zip, ctx))
+          const visitToken = await ensureLinkToken(c, zip)
+          await updateContactStormFields(c.id, stormFieldValues(zip, ctx, { visitToken }))
         } catch (err) {
           s.stats.lastError = err instanceof Error ? err.message : String(err)
           console.error(`[ghl] custom-field update failed for ${c.id}`, err)
@@ -214,6 +263,9 @@ async function flushStorm(stormId: string): Promise<void> {
         await addTagToContact(c.id, alertTag())
         s.stats.tagged++
         taggedThisStorm++
+        // Claim this human's identity only on success — if tagging failed we'd
+        // still want their duplicate record (same phone/email) to get a shot.
+        for (const k of keys) seenIdentity.add(k)
         recordNotification({ contactId: c.id, stormId, zip, status: "tagged" })
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)

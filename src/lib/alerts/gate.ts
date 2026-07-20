@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm"
 
 import { emit, subscribe } from "@/lib/bus"
 import { getDb, isDbConfigured } from "@/lib/db/client"
-import { zipAlerts } from "@/lib/db/schema"
+import { zipAlertEvents, zipAlerts } from "@/lib/db/schema"
 import { severityRank } from "@/lib/storms/types"
 import type { ZipInsightEvent } from "@/lib/zip-insights/types"
 
@@ -28,6 +28,9 @@ type Stats = {
 type Shape = {
   // zip → epoch ms of last emitted alert (cooldown gate; hydrated at boot)
   lastAlertedAt: Map<string, number>
+  // `${zip}:${stormId}` → severity already written to zip_alert_events, so the
+  // chatty zip_insight_updated stream doesn't hammer the history table.
+  recordedEvents: Map<string, string>
   stats: Stats
   unsubscribe?: () => void
 }
@@ -41,6 +44,7 @@ function getShape(): Shape {
   if (!globalThis.__stormSentryAlertGate) {
     globalThis.__stormSentryAlertGate = {
       lastAlertedAt: new Map(),
+      recordedEvents: new Map(),
       stats: {
         emitted: 0,
         skippedSeverity: 0,
@@ -88,6 +92,44 @@ function recordZipAlert(insight: ZipInsightEvent): void {
     .catch((err) => console.error("[alert-gate] persist failed", err))
 }
 
+/** Append to the per-ZIP severe-weather history (zip_alert_events). Runs for
+ *  every severity-passing, non-fixture insight — including ones the cooldown
+ *  later suppresses — so /zip/{zip} can show storm activity, not just sends. */
+function recordHistory(insight: ZipInsightEvent): void {
+  if (!isDbConfigured()) return
+  const s = getShape()
+  const id = `${insight.zip}:${insight.stormId}`
+  if (s.recordedEvents.get(id) === insight.severity) return
+  if (s.recordedEvents.size > 50_000) s.recordedEvents.clear() // leak guard
+  s.recordedEvents.set(id, insight.severity)
+  const row = {
+    id,
+    zip: insight.zip,
+    stormId: insight.stormId,
+    source: insight.source,
+    eventType: insight.eventType,
+    severity: insight.severity,
+    headline: insight.headline,
+    etaMinutes: insight.etaMinutes,
+    expiresAt: insight.expiresAt ? new Date(insight.expiresAt) : null,
+  }
+  void getDb()
+    .insert(zipAlertEvents)
+    .values(row)
+    .onConflictDoUpdate({
+      target: zipAlertEvents.id,
+      // Severity can upgrade in place (Moderate → Severe re-issue); keep the row current.
+      set: {
+        eventType: row.eventType,
+        severity: row.severity,
+        headline: row.headline,
+        etaMinutes: row.etaMinutes,
+        expiresAt: row.expiresAt,
+      },
+    })
+    .catch((err) => console.error("[alert-gate] history persist failed", err))
+}
+
 function consider(insight: ZipInsightEvent): void {
   const s = getShape()
   if (severityRank(insight.severity) < minRank()) {
@@ -98,6 +140,7 @@ function consider(insight: ZipInsightEvent): void {
     s.stats.skippedFixture++
     return
   }
+  recordHistory(insight)
   const cd = cooldownMs()
   if (cd > 0) {
     const last = s.lastAlertedAt.get(insight.zip)

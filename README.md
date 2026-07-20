@@ -60,7 +60,9 @@ SEED_DEMO_BUSINESSES=true             # demo contractor roster (matcher/chat/api
 # GHL_DEV_NOTIFIER=true               # opt-in: run the live GHL notifier from a dev machine
 ```
 
-To refresh the bundled ZIP dataset: `node scripts/build-zcta.mjs`.
+To refresh the bundled ZIP dataset: `node scripts/build-zcta.mjs`. To refresh
+the ZIP → city/state labels (powers place names + city/state search):
+`node scripts/build-zip-places.mjs`.
 
 ## Deploy (Railway)
 
@@ -183,11 +185,35 @@ webhook `event_type` and subscription name are unchanged. Live counts
 `alertGate`.
 
 GHL delivery rails on top of the gate (defaults): idempotent per contact×storm
-via `ghl_notifications` (redeploys can't re-message for the same warning); ≤
-`GHL_MAX_CONTACTS_PER_STORM` (500) per storm; per-ZIP contact lookups cached
-`GHL_CONTACT_CACHE_TTL_MIN` (360) and throttled (`GHL_MIN_CALL_GAP_MS`, 350). If
-your tenant's searchable postal field differs, set `GHL_ZIP_FIELD` (default
-`postalCode`). GHL stats at `GET /api/health` under `ghl`.
+via `ghl_notifications` (redeploys can't re-message for the same warning);
+**duplicate-human dedupe** — CRMs accumulate multiple contact records for one
+person, so within a storm any contact sharing a normalized phone or email with
+an already-notified contact is skipped (ledger status `skipped_duplicate`,
+stat `ghl.skippedDuplicate`); ≤ `GHL_MAX_CONTACTS_PER_STORM` (500) per storm;
+per-ZIP contact lookups cached `GHL_CONTACT_CACHE_TTL_MIN` (360) and throttled
+(`GHL_MIN_CALL_GAP_MS`, 350). If your tenant's searchable postal field differs,
+set `GHL_ZIP_FIELD` (default `postalCode`). GHL stats at `GET /api/health`
+under `ghl`.
+
+### Per-ZIP alert history
+
+The gate also appends every severity-passing, non-fixture insight to
+`zip_alert_events` (one row per zip×storm, **before** the cooldown check) —
+so `/zip/{zip}` can show a "recent severe weather" tail for the ZIP and its
+neighbors (~25 mi) even after the storms themselves expire and get pruned.
+
+### Referral tracking + soft accounts
+
+Outbound `storm_link` values carry an **opaque per-contact token**
+(`…/zip/64057?sv=<token>` — never raw email/name; the token resolves
+server-side). On landing, a beacon (`POST /api/visit`) records the visit
+(`site_visits`: source `ghl` / `referral:<host>` / `direct`), stamps a 90-day
+httpOnly cookie, and keeps a **prospect** row fresh (`prospects` — the GHL
+contacts we've alerted, created at notify time). The sign-up form prefills
+name/email for known visitors, and when someone registers with a matching
+email the prospect is **claimed** (linked to their user id) on first
+`/account` load. Aggregate picture (no PII): `GET /api/referrals?days=30`
+(signed-in only).
 
 ## Demo endpoints in production
 

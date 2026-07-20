@@ -11,8 +11,10 @@ import {
   removeTagFromContact,
   searchContactsByZip,
   updateContactStormFields,
+  type GhlContact,
 } from "@/lib/ghl/client"
 import { stormFieldValues } from "@/lib/ghl/notifier"
+import { ensureLinkToken } from "@/lib/referrals/store"
 
 export const dynamic = "force-dynamic"
 
@@ -51,6 +53,7 @@ export async function POST(req: Request) {
   const steps: Record<string, string> = {}
   try {
     let contactId = parsed.data.contactId
+    let contact: GhlContact | null = null
     const zip = parsed.data.zip ?? "75201"
     if (!contactId) {
       const contacts = await searchContactsByZip(zip)
@@ -60,9 +63,15 @@ export async function POST(req: Request) {
           { status: 404 },
         )
       }
-      contactId = contacts[0].id
+      contact = contacts[0]
+      contactId = contact.id
       steps.search = `found ${contacts.length} contact(s), using ${contactId}`
     }
+
+    // Same referral token a real alert would embed, so the test email's link
+    // exercises visit tracking end-to-end.
+    const visitToken = await ensureLinkToken(contact ?? { id: contactId }, zip)
+    if (visitToken) steps.visitToken = `storm_link carries ?sv=${visitToken.slice(0, 6)}…`
 
     const fields = stormFieldValues(zip, {
       eventType: "Tornado Warning (TEST)",
@@ -71,7 +80,7 @@ export async function POST(req: Request) {
         "[TEST] Storm Sentry end-to-end test — no real storm. Safe to ignore.",
       expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       etaMinutes: 45,
-    })
+    }, { visitToken })
     await updateContactStormFields(contactId, fields)
     steps.customFields = `set: ${Object.keys(fields).join(", ")}`
 

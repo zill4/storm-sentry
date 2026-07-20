@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { SiteNav } from "@/components/site-nav";
+import { VisitBeacon } from "@/components/visit-beacon";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,6 +44,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#EEF3F9] text-[#0B2037]">
         <SiteNav />
+        <VisitBeacon />
         {children}
       </body>
     </html>

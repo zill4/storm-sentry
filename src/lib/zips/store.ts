@@ -49,6 +49,40 @@ export function getZip(zip: string): ZipCentroid | undefined {
 }
 
 /**
+ * ZIPs within `radiusMiles` of the given ZIP's centroid, nearest first (the
+ * ZIP itself excluded). Bounding-box prefilter, then haversine — one pass over
+ * ~34k centroids, cheap enough to run per page view.
+ */
+export function zipsNear(
+  zip: string,
+  radiusMiles: number,
+  cap = 40,
+): Array<ZipCentroid & { miles: number }> {
+  const origin = getZip(zip)
+  if (!origin) return []
+  const radiusKm = radiusMiles * 1.609344
+  const degLat = radiusKm / 110.574
+  const degLng = radiusKm / (111.32 * Math.cos((origin.lat * Math.PI) / 180))
+  const out: Array<ZipCentroid & { miles: number }> = []
+  for (const z of getStore().all) {
+    if (z.zip === zip) continue
+    if (Math.abs(z.lat - origin.lat) > degLat || Math.abs(z.lng - origin.lng) > degLng) continue
+    const dLat = ((z.lat - origin.lat) * Math.PI) / 180
+    const dLng = ((z.lng - origin.lng) * Math.PI) / 180
+    const s =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((origin.lat * Math.PI) / 180) *
+        Math.cos((z.lat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2
+    const km = 2 * 6371 * Math.asin(Math.sqrt(s))
+    const miles = km / 1.609344
+    if (miles <= radiusMiles) out.push({ ...z, miles })
+  }
+  out.sort((a, b) => a.miles - b.miles)
+  return out.slice(0, cap)
+}
+
+/**
  * ZIP centroids that fall inside a storm polygon. Uses a cheap bounding-box
  * prefilter before the precise point-in-polygon test (same pattern as
  * businesses/matcher.ts) so it stays fast across all ~34k ZCTAs per storm.
