@@ -215,6 +215,47 @@ email the prospect is **claimed** (linked to their user id) on first
 `/account` load. Aggregate picture (no PII): `GET /api/referrals?days=30`
 (signed-in only).
 
+## Smart Tarp design studio (`/design`)
+
+A typeform-style chat funnel that replicates the "Your Smart Tarp Design Form"
+Google Form: intake wizard → logo upload → account gate → **gpt-image-2**
+design generation → chat revision loop (3 revisions, then hand-off to
+`DESIGN_SUPPORT_EMAIL`) → design selection → print order + team email →
+status tracking on `/account` → `/admin` queue for the print team.
+
+Key mechanics:
+
+- **Editable QR codes**: every design carries a QR encoding `/q/{slug}` (302
+  → `qr_links.target_url`). The QR is composited deterministically
+  (`qrcode` + `sharp`, error correction H) onto a reserved white zone — never
+  model-rendered — and the destination is editable by the customer
+  (`/account`) or admins at any time, even after printing.
+  `scripts/verify-qr-composite.ts` regression-tests scannability.
+- **Generation jobs** are `designs` rows (pending → generating → succeeded |
+  failed) run in-process (single replica, like the poller); progress streams
+  over the existing SSE bus (`design_updated`); boot recovery fails jobs a
+  redeploy interrupted. Assets live in the Railway bucket (`BUCKET_*`).
+- **Google Form ingestion**: ongoing Apps Script webhook + CSV backfill →
+  same admin queue. See [docs/google-form-ingest.md](docs/google-form-ingest.md).
+- **Admin** (`/admin`, users in `ADMIN_EMAILS`): order queue, status
+  transitions (appended to the customer-visible timeline), print bundle
+  (final PNG, raw PNG, QR SVG, original logo), QR retargeting.
+
+Environment (beyond the storm-side vars):
+
+```bash
+OPENAI_API_KEY="sk-…"                 # REQUIRED for generation (gpt-image-2)
+BUCKET_ENDPOINT/NAME/REGION/ACCESS_KEY_ID/SECRET_ACCESS_KEY  # Railway bucket (set)
+ADMIN_EMAILS="you@company.com"        # comma-separated admin allowlist
+GOOGLE_FORM_WEBHOOK_SECRET="…"        # gates POST /api/ingest/google-form
+RESEND_API_KEY="re_…"                 # order emails to the team (optional until set)
+EMAIL_FROM="Storm Sentry <orders@yourdomain>"
+ORDER_NOTIFY_EMAIL="team@yourdomain"  # where new-order emails go
+DESIGN_SUPPORT_EMAIL="kellie@brandalltarps.com"  # revision-limit hand-off
+# Optional tuning: TARP_VARIANT_COUNT=3, TARP_IMAGE_SIZE=3072x1536,
+# TARP_IMAGE_QUALITY=high, OPENAI_IMAGE_MODEL=gpt-image-2
+```
+
 ## Demo endpoints in production
 
 `/api/replay/*` and `/api/poll-now` are **blocked on production builds** unless

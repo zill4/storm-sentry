@@ -1,0 +1,1 @@
+ALTER TABLE "design_requests" ADD COLUMN "raw_payload" jsonb;

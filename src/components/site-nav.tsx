@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Activity, CloudRain, FileText, Map } from "lucide-react"
+import { Activity, CloudRain, FileText, Map, PenLine } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import { StormSentryWordmark } from "@/components/brand/logo"
@@ -14,6 +14,7 @@ const links = [
   { href: "/", label: "Storm Map", icon: Map },
   { href: "/reports", label: "ZIP Reports", icon: FileText },
   { href: "/forecast", label: "Forecast", icon: CloudRain },
+  { href: "/design", label: "Tarp Studio", icon: PenLine },
 ]
 
 function NavLink({

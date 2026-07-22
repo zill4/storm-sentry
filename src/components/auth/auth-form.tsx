@@ -15,11 +15,14 @@ export function AuthForm({
   mode,
   defaultName,
   defaultEmail,
+  next,
 }: {
   mode: "sign-in" | "sign-up"
   /** Prefill for visitors we already know from an alert link (see /api/visit). */
   defaultName?: string
   defaultEmail?: string
+  /** Same-site path to land on after auth (e.g. back into the design wizard). */
+  next?: string
 }) {
   const isSignUp = mode === "sign-up"
   const [name, setName] = useState(defaultName ?? "")
@@ -50,7 +53,7 @@ export function AuthForm({
       }
       // Hard navigation so server components (nav + account) re-read the new
       // session cookie. Keep `pending` true through the redirect.
-      window.location.assign("/account")
+      window.location.assign(next ?? "/account")
     } catch {
       setError("Couldn't reach the server. Please try again.")
       setPending(false)
@@ -143,7 +146,10 @@ export function AuthForm({
       <p className="mt-4 text-center text-sm text-[#5A6B7E]">
         {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
         <Link
-          href={isSignUp ? "/sign-in" : "/sign-up"}
+          href={
+            (isSignUp ? "/sign-in" : "/sign-up") +
+            (next ? `?next=${encodeURIComponent(next)}` : "")
+          }
           className="font-medium text-[#1FA6E5] hover:underline"
         >
           {isSignUp ? "Sign in" : "Create one"}

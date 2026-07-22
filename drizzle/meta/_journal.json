@@ -64,6 +64,20 @@
       "when": 1784324935330,
       "tag": "0008_large_kate_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784728068996,
+      "tag": "0009_pretty_wendigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784730085092,
+      "tag": "0010_secret_joshua_kane",
+      "breakpoints": true
     }
   ]
 }

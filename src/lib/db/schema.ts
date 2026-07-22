@@ -12,6 +12,8 @@ import {
 // Relative imports (not the @/ alias) so drizzle-kit's bundler resolves them.
 import type { StormGeometry, StormMotion } from "../storms/types"
 import type { NormalizedForecast, NowcastValues } from "../tomorrow/types"
+import type { OrderEvent } from "../design/types"
+import { user } from "./auth-schema"
 
 // Better Auth tables (user/session/account/verification) are defined separately
 // and re-exported here so drizzle-kit migrations and the Drizzle client see them.
@@ -238,6 +240,150 @@ export const ghlNotifications = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ghl_notifications_storm_id_idx").on(t.stormId)],
+)
+
+// --- Smart Tarp design funnel ---
+
+// One row per tarp-design request — the chat wizard's draft/submission record
+// (mirrors the "Your Smart Tarp Design Form" Google Form) or an ingested
+// Google Form response. Nearly all form fields are nullable: drafts fill
+// progressively and completeness is enforced in code at submission time.
+export const designRequests = pgTable(
+  "design_requests",
+  {
+    id: text("id").primaryKey(), // dr_<random>
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    // Pre-auth draft ownership: an httpOnly cookie holds this key until the
+    // account gate links the row to a user id.
+    draftKey: text("draft_key").unique(),
+    source: text("source").notNull().default("chat"), // "chat" | "google_form"
+    status: text("status").notNull().default("draft"), // DesignRequestStatus
+    email: text("email"),
+    fullName: text("full_name"),
+    businessName: text("business_name"),
+    shippingAddress: text("shipping_address"),
+    phone: text("phone"),
+    website: text("website"),
+    qrAction: text("qr_action"), // QrAction key
+    qrTargetUrl: text("qr_target_url"), // destination the customer asked for
+    services: jsonb("services").$type<string[]>(),
+    vendorBadges: jsonb("vendor_badges").$type<string[]>(),
+    howFound: text("how_found"),
+    howFoundOther: text("how_found_other"),
+    designStyle: text("design_style"), // DesignStyleKey
+    specialInstructions: text("special_instructions"),
+    consentTransactionalSms: boolean("consent_transactional_sms").notNull().default(false),
+    consentMarketingSms: boolean("consent_marketing_sms").notNull().default(false),
+    revisionCount: integer("revision_count").notNull().default(0),
+    // Idempotency key for ingested Google Form responses.
+    googleFormResponseId: text("google_form_response_id").unique(),
+    // Verbatim source payload for ingested responses (Drive logo links, any
+    // unmapped answers) — the admin view renders what the mapping didn't.
+    rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("design_requests_user_id_idx").on(t.userId),
+    index("design_requests_status_idx").on(t.status),
+  ],
+)
+
+// Customer-uploaded files (logo, badges) attached to a request. Bytes live in
+// object storage under storage_key; this row is the metadata.
+export const designUploads = pgTable(
+  "design_uploads",
+  {
+    id: text("id").primaryKey(), // du_<random>
+    requestId: text("request_id")
+      .notNull()
+      .references(() => designRequests.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull().default("logo"), // "logo" | "other"
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    storageKey: text("storage_key").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("design_uploads_request_id_idx").on(t.requestId)],
+)
+
+// One row per generated tarp design image (initial variant or revision). Job
+// state is folded in (status/attempts/started_at) — a design IS one generation
+// job, and boot recovery just fails rows stuck in "generating".
+export const designs = pgTable(
+  "designs",
+  {
+    id: text("id").primaryKey(), // dg_<random>
+    requestId: text("request_id")
+      .notNull()
+      .references(() => designRequests.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(), // per-request sequence, 1-based
+    parentDesignId: text("parent_design_id"), // set on revisions
+    styleKey: text("style_key"), // DesignStyleKey used for the prompt
+    prompt: text("prompt"), // full prompt sent to the image model
+    revisionNote: text("revision_note"), // customer's revision request, verbatim
+    model: text("model"),
+    status: text("status").notNull().default("pending"), // pending | generating | succeeded | failed
+    error: text("error"),
+    attempts: integer("attempts").notNull().default(0),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    rawStorageKey: text("raw_storage_key"), // model output, pre-QR composite
+    storageKey: text("storage_key"), // final composited PNG (what the customer sees)
+    width: integer("width"),
+    height: integer("height"),
+    qrSlug: text("qr_slug"), // qr_links.slug composited onto this design
+    selectedAt: timestamp("selected_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("designs_request_id_idx").on(t.requestId),
+    index("designs_status_idx").on(t.status),
+  ],
+)
+
+// Editable QR redirect targets. The printed QR encodes /q/{slug} forever; where
+// it lands is this row's target_url, changeable by us or the customer at any
+// time. 302 (never 301) so nothing upstream caches a stale destination.
+export const qrLinks = pgTable("qr_links", {
+  slug: text("slug").primaryKey(),
+  targetUrl: text("target_url").notNull(),
+  requestId: text("request_id").references(() => designRequests.id, { onDelete: "set null" }),
+  createdByUserId: text("created_by_user_id"),
+  label: text("label"),
+  hits: integer("hits").notNull().default(0),
+  lastScanAt: timestamp("last_scan_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
+// One row per submitted print order (a request whose design was selected).
+// events is the append-only status timeline shown to the customer and admin.
+export const orders = pgTable(
+  "orders",
+  {
+    id: text("id").primaryKey(), // or_<random>
+    requestId: text("request_id")
+      .notNull()
+      .unique()
+      .references(() => designRequests.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    designId: text("design_id").notNull(),
+    status: text("status").notNull().default("pending_review"), // OrderStatus
+    notes: text("notes"),
+    events: jsonb("events").$type<OrderEvent[]>().notNull(),
+    teamNotifiedAt: timestamp("team_notified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("orders_status_idx").on(t.status),
+    index("orders_user_id_idx").on(t.userId),
+  ],
 )
 
 // Shared Tomorrow.io budget counters (one row per UTC day). The single source of

@@ -3,13 +3,19 @@ import { redirect } from "next/navigation"
 
 import { AuthForm } from "@/components/auth/auth-form"
 import { getServerSession } from "@/lib/auth/session"
+import { safeNextPath } from "@/lib/auth/next-path"
 import { resolveToken, VISIT_COOKIE } from "@/lib/referrals/store"
 
 export const dynamic = "force-dynamic"
 
-export default async function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>
+}) {
+  const next = safeNextPath((await searchParams).next)
   const session = await getServerSession()
-  if (session) redirect("/account")
+  if (session) redirect(next ?? "/account")
 
   // Visitors who arrived through an alert link carry the referral cookie —
   // resolve it server-side (the token is opaque; no PII ever rides the URL)
@@ -23,6 +29,7 @@ export default async function SignUpPage() {
         mode="sign-up"
         defaultName={known?.name ?? undefined}
         defaultEmail={known?.email ?? undefined}
+        next={next}
       />
     </main>
   )
