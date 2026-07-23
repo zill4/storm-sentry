@@ -27,6 +27,7 @@ export type ClientDraft = {
   howFound: string | null
   howFoundOther: string | null
   designStyle: string | null
+  orientation: string | null
   specialInstructions: string | null
   consentTransactionalSms: boolean
   consentMarketingSms: boolean

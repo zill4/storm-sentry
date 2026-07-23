@@ -15,9 +15,9 @@ import { newId } from "./ids"
 import {
   TARP_IMAGE_MODEL,
   TARP_IMAGE_QUALITY,
-  TARP_IMAGE_SIZE,
   buildRevisionPrompt,
   buildTarpPrompt,
+  tarpImageSize,
   variantHint,
 } from "./prompt"
 import { listUploads, type DesignRequestRow, type DesignRow } from "./store"
@@ -142,6 +142,7 @@ async function prepareLogoInput(
 async function callImageModel(
   prompt: string,
   inputs: { buffer: Buffer; mime: string; name: string }[],
+  size: string,
 ): Promise<Buffer> {
   const files = await Promise.all(
     inputs.map((i) => toFile(i.buffer, i.name, { type: i.mime })),
@@ -150,7 +151,7 @@ async function callImageModel(
     model: TARP_IMAGE_MODEL,
     image: files.length === 1 ? files[0] : files,
     prompt,
-    size: TARP_IMAGE_SIZE as OpenAI.Images.ImageEditParams["size"],
+    size: size as OpenAI.Images.ImageEditParams["size"],
     quality: TARP_IMAGE_QUALITY,
     n: 1,
   })
@@ -209,7 +210,7 @@ async function runDesignJob(designId: string): Promise<void> {
     }
 
     if (!design.prompt) throw new JobError("This design has no prompt — start generation again.")
-    const raw = await callImageModel(design.prompt, inputs)
+    const raw = await callImageModel(design.prompt, inputs, tarpImageSize(request.orientation))
 
     const rawKey = `requests/${request.id}/designs/${designId}/raw.png`
     await putObject(rawKey, raw, "image/png")

@@ -271,6 +271,9 @@ export const designRequests = pgTable(
     howFound: text("how_found"),
     howFoundOther: text("how_found_other"),
     designStyle: text("design_style"), // DesignStyleKey
+    // "vertical" (1-story: graphics ride high, above debris) | "horizontal"
+    // (2-3 story). The print size itself is bought separately.
+    orientation: text("orientation"),
     specialInstructions: text("special_instructions"),
     consentTransactionalSms: boolean("consent_transactional_sms").notNull().default(false),
     consentMarketingSms: boolean("consent_marketing_sms").notNull().default(false),

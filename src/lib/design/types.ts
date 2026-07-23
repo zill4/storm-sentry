@@ -82,6 +82,29 @@ export const HOW_FOUND = [
   "Other",
 ] as const
 
+// Tarp orientation. Not on the Google Form — the print team inferred it from
+// the order — but the design engine needs it up front: it sets the canvas
+// aspect and is the customer's one physical-fit decision (sizes are bought
+// separately; every size comes in both orientations).
+export const ORIENTATIONS = [
+  {
+    key: "vertical",
+    label: "Vertical",
+    bestFor: "1-story buildings",
+    guidance:
+      "Graphics sit high on the tarp with the long black zone below — so roof debris never covers your branding on a single-story roof.",
+  },
+  {
+    key: "horizontal",
+    label: "Horizontal",
+    bestFor: "2-3 story buildings",
+    guidance:
+      "The wide banner read — maximum street presence when the tarp hangs high on a taller building.",
+  },
+] as const
+
+export type TarpOrientation = (typeof ORIENTATIONS)[number]["key"]
+
 // "REQUIRED: Choose Your Design Style Preference" — the four styles, with the
 // form's own positioning copy (shown in the wizard) and the design mandate
 // (drives the image-generation prompt).

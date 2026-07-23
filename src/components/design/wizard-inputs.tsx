@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Check, FileText, Loader2, Paperclip, Send, Trash2 } from "lucide-react"
 
-import { DESIGN_STYLES } from "@/lib/design/types"
 import type { ClientUpload } from "./wizard-types"
 
 // Input widgets for the wizard dock. Each renders the control for one step
@@ -197,52 +196,64 @@ export function ChipsDock({
   )
 }
 
-export function StyleDock({
+export function OrientationDock({
   initialKey,
   onSubmit,
 }: {
   initialKey?: string | null
   onSubmit: (key: string) => void
 }) {
-  const [picked, setPicked] = useState<string | null>(initialKey ?? null)
+  const OPTIONS = [
+    {
+      key: "vertical",
+      label: "Vertical",
+      badge: "Best for 1-story buildings",
+      guidance:
+        "Graphics ride high with the long coverage zone below — debris never sits on your branding.",
+      image: "/tarp-examples/vertical-16x20.png",
+    },
+    {
+      key: "horizontal",
+      label: "Horizontal",
+      badge: "Best for 2-3 story buildings",
+      guidance: "The wide billboard read — maximum street presence hung high on taller buildings.",
+      image: "/tarp-examples/horizontal-20x16.png",
+    },
+  ]
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {DESIGN_STYLES.map((s) => {
-          const on = picked === s.key
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setPicked(s.key)}
-              className={`flex flex-col gap-1 rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
-                on
-                  ? "border-[#1FA6E5] ring-2 ring-[#1FA6E5]/30"
-                  : "border-[#D7E0EA] hover:border-[#8B98A8]"
-              }`}
-            >
+    <div className="grid gap-2.5 sm:grid-cols-2">
+      {OPTIONS.map((o) => {
+        const on = initialKey === o.key
+        return (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => onSubmit(o.key)}
+            className={`flex flex-col rounded-2xl border bg-white text-left shadow-sm transition ${
+              on
+                ? "border-[#1FA6E5] ring-2 ring-[#1FA6E5]/30"
+                : "border-[#D7E0EA] hover:border-[#8B98A8]"
+            }`}
+          >
+            <span className="flex h-64 w-full items-center justify-center overflow-hidden rounded-t-2xl bg-[#E4EBF3]/60 p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={o.image}
+                alt={`${o.label} tarp example`}
+                className="max-h-full max-w-full rounded object-contain"
+                loading="lazy"
+              />
+            </span>
+            <span className="flex flex-col gap-1 p-4">
               <span className="text-[11px] uppercase tracking-[0.14em] text-[#1FA6E5]">
-                {s.tagline}
+                {o.badge}
               </span>
-              <span className="font-display text-base font-bold text-[#0B2037]">{s.name}</span>
-              <span className="text-xs leading-5 text-[#5A6B7E]">{s.pitch}</span>
-              <span className="mt-1 text-[11px] uppercase tracking-[0.08em] text-[#8B98A8]">
-                Best for: {s.bestFor}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          className={PRIMARY_BTN}
-          disabled={!picked}
-          onClick={() => picked && onSubmit(picked)}
-        >
-          Use this style
-        </button>
-      </div>
+              <span className="font-display text-base font-bold text-[#0B2037]">{o.label}</span>
+              <span className="text-xs leading-5 text-[#5A6B7E]">{o.guidance}</span>
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }

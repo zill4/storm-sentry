@@ -9,7 +9,15 @@ import { designStyle } from "./types"
 // solid black. That black "coverage zone" is deliberate: it's the part of
 // the tarp that drapes over debris, so no graphics may live there.
 
-export const TARP_IMAGE_SIZE = process.env.TARP_IMAGE_SIZE ?? "3072x2048" // 3:2 (30ft x 20ft), /16
+// Canvas per orientation (both /16, matching the two print families):
+// horizontal 3:2 (30x20 ft class), vertical 2:3 (20x30 ft class).
+export const TARP_IMAGE_SIZE_HORIZONTAL = process.env.TARP_IMAGE_SIZE ?? "3072x2048"
+export const TARP_IMAGE_SIZE_VERTICAL = process.env.TARP_IMAGE_SIZE_VERTICAL ?? "2048x3072"
+
+export function tarpImageSize(orientation: string | null): string {
+  return orientation === "vertical" ? TARP_IMAGE_SIZE_VERTICAL : TARP_IMAGE_SIZE_HORIZONTAL
+}
+
 export const TARP_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2"
 export const TARP_IMAGE_QUALITY = (process.env.TARP_IMAGE_QUALITY ?? "high") as
   | "low"
@@ -45,11 +53,15 @@ export function buildTarpPrompt(
   const services = request.services?.join(" · ") || "ROOFING"
   const badges = request.vendorBadges?.join(", ") || "none"
   const qrPct = Math.round(qrZoneFraction(request.designStyle) * 100)
+  const vertical = request.orientation === "vertical"
+  const shape = vertical ? "portrait 2:3 (taller than wide)" : "landscape 3:2"
+  // Vertical tarps run much longer below the band: brand band tighter to the top.
+  const bandShare = vertical ? "upper 40-45%" : "upper 55-60%"
 
   const lines = [
-    `Design print-ready artwork for a heavy-duty roofing tarp ("Smart Tarp"), landscape 3:2, edge to edge, read from the street on a storm-damaged roof. Output the flat artwork only — no photo mockup, no scene, no perspective.`,
+    `Design print-ready artwork for a heavy-duty roofing tarp ("Smart Tarp"), ${shape}, edge to edge, read from the street on a storm-damaged roof. Output the flat artwork only — no photo mockup, no scene, no perspective.`,
     ``,
-    `TARP ANATOMY (non-negotiable): all branding lives in a TOP BAND covering roughly the upper 55-60% of the canvas. The remaining lower portion is SOLID MATTE BLACK and completely empty — it is the coverage zone that drapes over storm debris, so no text, logos, or graphics may appear there. A wavy American-flag ribbon runs along the bottom edge of the brand band, bleeding into the black zone as the only transition element${request.specialInstructions?.toLowerCase().includes("no flag") ? " — EXCEPT the customer asked for no flag imagery, so use a clean brand-colored wave instead" : ""}.`,
+    `TARP ANATOMY (non-negotiable): all branding lives in a TOP BAND covering roughly the ${bandShare} of the canvas. The remaining lower portion is SOLID MATTE BLACK and completely empty — it is the coverage zone that drapes over storm debris, so no text, logos, or graphics may appear there. A wavy American-flag ribbon runs along the bottom edge of the brand band, bleeding into the black zone as the only transition element${request.specialInstructions?.toLowerCase().includes("no flag") ? " — EXCEPT the customer asked for no flag imagery, so use a clean brand-colored wave instead" : ""}.`,
     ``,
     `Inside the top band:`,
     `- A thin uppercase strip across the very top edge listing the services: "${services.toUpperCase()}".`,
@@ -62,7 +74,10 @@ export function buildTarpPrompt(
       : `- No vendor badge chips.`,
     `- RESERVED QR CORNER: keep the TOP-RIGHT corner of the band — a square area about ${qrPct}% of the image width, 2.5% in from the top and right edges — completely EMPTY of any text, graphics, boxes, or panels. Leave only the plain band background there: a real QR code on its own white panel is composited into that corner after generation. Do NOT draw a white square, frame, or placeholder QR yourself. You may point a small "SCAN FOR A QUOTE" callout at that corner from outside it.`,
     ``,
-    `Layout mandate — ${style?.name ?? "standard"}: ${style?.mandate ?? "balanced professional layout."}`,
+    `Layout: ${
+      style?.mandate ??
+      "the standard Smart Tarp template — logo and company name prominent at the top of the band, a large high-contrast phone number directly beneath, website and a clean badge row below, balanced and professional like a premium contractor yard banner."
+    }`,
     hint ?? "",
     withReference
       ? `\nThe second attached image is a LAYOUT ANATOMY reference from a previous tarp: use it only for the structural pattern (tagline strip, brand block, badge row, flag wave, black zone). Do NOT copy its company name, colors, QR contents, or any small red measurement annotations.`
@@ -84,6 +99,6 @@ export function buildRevisionPrompt(request: DesignRequestRow, note: string): st
     ``,
     `The second attached image is the company's original logo — keep its reproduction exact.`,
     `Non-negotiables: the white QR panel in the top-right corner is composited separately — keep that corner exactly as it is with nothing new entering it, and keep the lower solid-black coverage zone completely empty.`,
-    `Output the full flat artwork, landscape 3:2, edge to edge, print-ready.`,
+    `Output the full flat artwork, ${request.orientation === "vertical" ? "portrait 2:3" : "landscape 3:2"}, edge to edge, print-ready.`,
   ].join("\n")
 }

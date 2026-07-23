@@ -4,7 +4,7 @@ import { getDb, isDbConfigured } from "@/lib/db/client"
 import { designRequests, designUploads, designs } from "@/lib/db/schema"
 import { newId } from "./ids"
 import {
-  DESIGN_STYLES,
+  ORIENTATIONS,
   QR_ACTIONS,
   type DesignRequestStatus,
 } from "./types"
@@ -42,6 +42,7 @@ export type DraftPatch = Partial<
     | "howFound"
     | "howFoundOther"
     | "designStyle"
+    | "orientation"
     | "specialInstructions"
     | "consentTransactionalSms"
     | "consentMarketingSms"
@@ -62,6 +63,7 @@ const PATCHABLE_KEYS = [
   "howFound",
   "howFoundOther",
   "designStyle",
+  "orientation",
   "specialInstructions",
   "consentTransactionalSms",
   "consentMarketingSms",
@@ -244,7 +246,7 @@ export async function getDesign(id: string): Promise<DesignRow | null> {
 // --- Validation ---
 
 const QR_ACTION_KEYS = QR_ACTIONS.map((a) => a.key) as string[]
-const STYLE_KEYS = DESIGN_STYLES.map((s) => s.key) as string[]
+const ORIENTATION_KEYS = ORIENTATIONS.map((o) => o.key) as string[]
 
 export type DraftCompleteness = { ready: boolean; missing: string[] }
 
@@ -265,7 +267,7 @@ export function draftCompleteness(
   if (!row.services?.length) missing.push("services")
   if (!row.vendorBadges?.length) missing.push("vendor badges")
   if (!row.howFound?.trim()) missing.push("how you found us")
-  if (!row.designStyle || !STYLE_KEYS.includes(row.designStyle)) missing.push("design style")
+  if (!row.orientation || !ORIENTATION_KEYS.includes(row.orientation)) missing.push("tarp orientation")
   if (!row.consentTransactionalSms) missing.push("order-update SMS consent")
   if (!uploads.some((u) => u.kind === "logo")) missing.push("logo upload")
   return { ready: missing.length === 0, missing }

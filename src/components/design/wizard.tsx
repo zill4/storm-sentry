@@ -7,15 +7,15 @@ import { Loader2, PencilLine, Sparkles } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import {
   HOW_FOUND,
+  ORIENTATIONS,
   QR_ACTIONS,
   SERVICES,
   VENDOR_BADGES,
-  designStyle,
 } from "@/lib/design/types"
 import {
   ChipsDock,
   ConsentDock,
-  StyleDock,
+  OrientationDock,
   TextDock,
   TextareaDock,
   UploadDock,
@@ -37,7 +37,7 @@ type StepKey =
   | "shippingAddress"
   | "services"
   | "vendorBadges"
-  | "designStyle"
+  | "orientation"
   | "qrAction"
   | "qrTarget"
   | "logo"
@@ -110,13 +110,13 @@ const STEPS: Step[] = [
     summary: (d) => d.vendorBadges?.join(", ") ?? null,
   },
   {
-    key: "designStyle",
+    key: "orientation",
     question: () =>
-      "Now the big one: choose your design style. This sets the focus of the whole layout and helps us nail the first proof.",
-    answered: (d) => Boolean(d?.designStyle),
+      "Which orientation fits your buildings? Your tarp size is set with your order — this decides where the graphics sit. Vertical keeps branding above the debris line on 1-story roofs; horizontal is the billboard read for 2-3 stories.",
+    answered: (d) => Boolean(d?.orientation),
     summary: (d) => {
-      const s = designStyle(d.designStyle)
-      return s ? `${s.name} (${s.tagline})` : d.designStyle
+      const o = ORIENTATIONS.find((x) => x.key === d.orientation)
+      return o ? `${o.label} — ${o.bestFor}` : d.orientation
     },
   },
   {
@@ -525,8 +525,11 @@ export function DesignWizard({ signedIn }: { signedIn: boolean }) {
               onSubmit={(sel) => save({ vendorBadges: sel })}
             />
           )}
-          {step.key === "designStyle" && (
-            <StyleDock initialKey={draft?.designStyle} onSubmit={(key) => save({ designStyle: key })} />
+          {step.key === "orientation" && (
+            <OrientationDock
+              initialKey={draft?.orientation}
+              onSubmit={(key) => save({ orientation: key })}
+            />
           )}
           {step.key === "qrAction" && (
             <ChipsDock
