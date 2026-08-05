@@ -8,7 +8,7 @@
       "port": 8080
     },
     {
-      "name": "brandall-studio",
+      "name": "smart-tarp-studio",
       "runtimeExecutable": "/Users/justincrisp/.local/node20/bin/npm",
       "runtimeArgs": ["--prefix", "/Users/justincrisp/Code/brandall-smart-studio", "run", "dev"],
       "port": 8081
