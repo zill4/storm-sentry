@@ -15,7 +15,6 @@ const ALL_TYPES = [
   "matches_pruned",
   "fixtures_cleared",
   "poll_completed",
-  "design_updated",
 ] as const
 
 export function useLiveEvents(onEvent: (event: BusEvent | { type: "hello"; at: string }) => void) {

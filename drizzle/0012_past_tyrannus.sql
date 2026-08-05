@@ -1,0 +1,18 @@
+-- NO-OP BY DESIGN. Do not add DROP statements here.
+--
+-- The Smart Tarp funnel moved to its own app (brandall-smart-studio), which
+-- runs as a second Railway service against THIS SAME Postgres. Its five tables
+-- were removed from src/lib/db/schema.ts, so drizzle-kit generated
+--
+--   DROP TABLE design_requests, design_uploads, designs, orders, qr_links
+--
+-- which would have deleted live customer data the studio depends on. The
+-- generated SQL was replaced with this comment; the accompanying snapshot in
+-- meta/ was kept, so future `db:generate` runs diff against a schema that no
+-- longer claims those tables and won't re-propose the drop.
+--
+-- Ownership from here on: this repo owns the storm/ZIP/webhook tables and the
+-- Better Auth tables (user, session, account, verification). The studio owns
+-- the five above and tracks its own migrations in
+-- drizzle.__drizzle_migrations_studio.
+SELECT 1;

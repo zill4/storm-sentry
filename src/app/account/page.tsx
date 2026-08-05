@@ -1,7 +1,6 @@
 import { Bell, Bookmark, Settings } from "lucide-react"
 
 import { SignOutButton } from "@/components/auth/sign-out-button"
-import { AccountOrders } from "@/components/design/account-orders"
 import { requireUser } from "@/lib/auth/session"
 import { claimProspects } from "@/lib/referrals/store"
 
@@ -70,8 +69,6 @@ export default async function AccountPage() {
           </div>
           <SignOutButton variant="full" />
         </section>
-
-        <AccountOrders userId={user.id} />
 
         <div className="grid gap-4 sm:grid-cols-3">
           {GATED_FEATURES.map((f) => {

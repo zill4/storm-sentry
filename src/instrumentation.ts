@@ -31,13 +31,4 @@ export async function register() {
   console.log(
     `[storm-sentry] ghl notifier ${ghlResult.started ? "started" : `not started (${ghlResult.reason})`}`,
   )
-  try {
-    const { recoverStuckDesigns } = await import("./lib/design/generate")
-    const recovered = await recoverStuckDesigns()
-    if (recovered > 0) {
-      console.log(`[storm-sentry] failed ${recovered} design job(s) stuck from a previous run`)
-    }
-  } catch (err) {
-    console.error("[storm-sentry] design job recovery failed", err)
-  }
 }

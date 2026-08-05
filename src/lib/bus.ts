@@ -21,17 +21,6 @@ export type BusEvent =
     }
   | { type: "matches_pruned"; at: string; count: number }
   | { type: "fixtures_cleared"; at: string; count: number }
-  // Tarp design pipeline: a design row changed status (pending/generating/
-  // succeeded/failed). requestStatus rides along when the whole request
-  // transitioned (e.g. last job settled → "reviewing").
-  | {
-      type: "design_updated"
-      at: string
-      requestId: string
-      designId: string
-      status: string
-      requestStatus?: string
-    }
   | {
       type: "poll_completed"
       at: string
