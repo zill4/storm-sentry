@@ -9,7 +9,19 @@ export function appBaseUrl(): string {
   return raw.replace(/\/+$/, "")
 }
 
-/** Public, no-auth storm report for a ZIP — the link automations send out. */
+/**
+ * Public, no-auth storm report for a ZIP — the link the GHL/Zapier automations
+ * send out.
+ *
+ * These now point at the umbrella site, which is where the storm section lives
+ * (smarttarpsolutions.com/storms/zip/{zip}). Links already sent still work:
+ * this app's middleware forwards /zip/{zip} there, query string intact, so the
+ * ?sv= referral token survives. New messages skip that hop.
+ */
+export function solutionsBaseUrl(): string {
+  return (process.env.SOLUTIONS_BASE_URL ?? "https://smarttarpsolutions.com").replace(/\/+$/, "")
+}
+
 export function zipReportUrl(zip: string): string {
-  return `${appBaseUrl()}/zip/${zip}`
+  return `${solutionsBaseUrl()}/storms/zip/${zip}`
 }
