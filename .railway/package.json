@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Railway infrastructure-as-code SDK, kept apart from the app's dependencies. Install with `npm ci --prefix .railway` before `railway config plan`.",
+  "devDependencies": {
+    "railway": "3.16.0"
+  }
+}
